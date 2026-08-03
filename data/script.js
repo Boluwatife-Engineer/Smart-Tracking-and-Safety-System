@@ -1,40 +1,86 @@
 const SERVICE_UUID = "6f1f9ea6-76b7-4460-918b-5fa33f709630";
 
 const TEMP_UUID = "bc35d307-d854-44ca-96fd-f5e5e08fd3c4";
-const HUM_UUID = "b6042e4d-e374-4666-8159-aecd1e097b5c";
+const HUM_UUID  = "b6042e4d-e374-4666-8159-aecd1e097b5c";
+const LED_UUID  = "dabed4fd-f792-443f-b186-3da384f9d673";
+
+//========================================
+
+const connectBtn = document.getElementById("connectBtn");
+
+const tempText = document.getElementById("temp");
+const humText = document.getElementById("hum");
+
+const ledBtn = document.getElementById("ledBtn");
+
+//========================================
+
+let device;
+let server;
 
 let tempCharacteristic;
 let humCharacteristic;
+let ledCharacteristic;
 
-document
-    .getElementById("connectBtn")
-    .addEventListener("click", connect);
+let ledOn = false;
+
+//========================================
+
+connectBtn.addEventListener("click", connect);
+
+ledBtn.addEventListener("click", toggleLED);
+
+//========================================
 
 async function connect() {
 
     try {
 
-        const device = await navigator.bluetooth.requestDevice({
+        device = await navigator.bluetooth.requestDevice({
 
             filters: [
                 {
-                    services: [SERVICE_UUID]
+                    name: "My Tracker"
                 }
-            ]
+            ],
+
+            optionalServices: [SERVICE_UUID]
 
         });
 
-        console.log(device.name);
+        device.addEventListener(
+            "gattserverdisconnected",
+            onDisconnected
+        );
 
-        const server = await device.gatt.connect();
+        server = await device.gatt.connect();
 
-        console.log("Connected");
+        const service =
+            await server.getPrimaryService(SERVICE_UUID);
 
-        const service = await server.getPrimaryService(SERVICE_UUID);
+        tempCharacteristic =
+            await service.getCharacteristic(TEMP_UUID);
 
-        tempCharacteristic = await service.getCharacteristic(TEMP_UUID);
+        humCharacteristic =
+            await service.getCharacteristic(HUM_UUID);
 
-        humCharacteristic = await service.getCharacteristic(HUM_UUID);
+        ledCharacteristic =
+            await service.getCharacteristic(LED_UUID);
+
+        //----------------------------------
+
+        const ledValue =
+            await ledCharacteristic.readValue();
+
+        const state =
+            new TextDecoder().decode(ledValue);
+
+        ledOn = (state === "ON");
+
+        ledBtn.textContent =
+            ledOn ? "Turn OFF" : "Turn ON";
+
+        //----------------------------------
 
         await tempCharacteristic.startNotifications();
 
@@ -50,31 +96,122 @@ async function connect() {
             handleHumidity
         );
 
-        console.log("Notifications Enabled");
+        connectBtn.textContent = "Connected";
 
-    } catch (err) {
+        connectBtn.disabled = true;
 
-        console.log(err);
+        ledBtn.disabled = false;
+
+        console.log("Connected");
 
     }
+
+    catch (error) {
+
+        console.error(error);
+
+        connectBtn.textContent = "Connect";
+
+        connectBtn.disabled = false;
+
+    }
+
 }
+
+//========================================
 
 function handleTemperature(event) {
 
-    const value = new TextDecoder().decode(event.target.value);
+    const value = new TextDecoder().decode(
+        event.target.value
+    );
 
-    document.getElementById("temp").innerHTML = value + " °C";
-
-    console.log("Temperature:", value);
+    tempText.textContent = value + " °C";
 
 }
 
+//========================================
+
 function handleHumidity(event) {
 
-    const value = new TextDecoder().decode(event.target.value);
+    const value = new TextDecoder().decode(
+        event.target.value
+    );
 
-    document.getElementById("hum").innerHTML = value + " %";
+    humText.textContent = value + " %";
 
-    console.log("Humidity:", value);
+}
+
+//========================================
+
+async function toggleLED() {
+
+    if (!ledCharacteristic) return;
+
+    const encoder = new TextEncoder();
+
+    try {
+
+        if (ledOn) {
+
+            await ledCharacteristic.writeValue(
+                encoder.encode("OFF")
+            );
+
+            ledOn = false;
+
+            ledBtn.textContent = "Turn ON";
+
+            console.log("LED OFF");
+
+        }
+
+        else {
+
+            await ledCharacteristic.writeValue(
+                encoder.encode("ON")
+            );
+
+            ledOn = true;
+
+            ledBtn.textContent = "Turn OFF";
+
+            console.log("LED ON");
+
+        }
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+    }
+
+}
+
+//========================================
+
+function onDisconnected() {
+
+    console.log("Disconnected");
+
+    connectBtn.textContent = "Connect";
+
+    connectBtn.disabled = false;
+
+    ledBtn.disabled = true;
+
+    ledBtn.textContent = "Turn ON";
+
+    tempText.textContent = "-C";
+
+    humText.textContent = "-%";
+
+    ledOn = false;
+
+    tempCharacteristic = null;
+    humCharacteristic = null;
+    ledCharacteristic = null;
 
 }
