@@ -1,36 +1,62 @@
+//UUIDS
+
 const SERVICE_UUID = "6f1f9ea6-76b7-4460-918b-5fa33f709630";
 
-const TEMP_UUID = "bc35d307-d854-44ca-96fd-f5e5e08fd3c4";
-const HUM_UUID  = "b6042e4d-e374-4666-8159-aecd1e097b5c";
-const LED_UUID  = "dabed4fd-f792-443f-b186-3da384f9d673";
+const MOTION_UUID = "11111111-1111-1111-1111-111111111111";
 
-//========================================
+const ACCEL_X_UUID = "22222222-2222-2222-2222-222222222221";
+const ACCEL_Y_UUID = "22222222-2222-2222-2222-222222222222";
+const ACCEL_Z_UUID = "22222222-2222-2222-2222-222222222223";
+
+const GYRO_X_UUID = "33333333-3333-3333-3333-333333333331";
+const GYRO_Y_UUID = "33333333-3333-3333-3333-333333333332";
+const GYRO_Z_UUID = "33333333-3333-3333-3333-333333333333";
+
+const LED_UUID = "dabed4fd-f792-443f-b186-3da384f9d673";
+
+
 
 const connectBtn = document.getElementById("connectBtn");
-
-const tempText = document.getElementById("temp");
-const humText = document.getElementById("hum");
-
 const ledBtn = document.getElementById("ledBtn");
 
-//========================================
+const statusText = document.getElementById("status");
+const motionText = document.getElementById("motion");
+
+const ax = document.getElementById("ax");
+const ay = document.getElementById("ay");
+const az = document.getElementById("az");
+
+const gx = document.getElementById("gx");
+const gy = document.getElementById("gy");
+const gz = document.getElementById("gz");
+
+//BLE
 
 let device;
 let server;
+let service;
 
-let tempCharacteristic;
-let humCharacteristic;
-let ledCharacteristic;
+let motionChar;
+
+let accelXChar;
+let accelYChar;
+let accelZChar;
+
+let gyroXChar;
+let gyroYChar;
+let gyroZChar;
+
+let ledChar;
 
 let ledOn = false;
 
-//========================================
+
 
 connectBtn.addEventListener("click", connect);
 
 ledBtn.addEventListener("click", toggleLED);
 
-//========================================
+
 
 async function connect() {
 
@@ -40,7 +66,7 @@ async function connect() {
 
             filters: [
                 {
-                    name: "My Tracker"
+                    name: "Smart Tracker"
                 }
             ],
 
@@ -55,50 +81,76 @@ async function connect() {
 
         server = await device.gatt.connect();
 
-        const service =
-            await server.getPrimaryService(SERVICE_UUID);
+        service = await server.getPrimaryService(SERVICE_UUID);
 
-        tempCharacteristic =
-            await service.getCharacteristic(TEMP_UUID);
+        motionChar = await service.getCharacteristic(MOTION_UUID);
 
-        humCharacteristic =
-            await service.getCharacteristic(HUM_UUID);
+        accelXChar = await service.getCharacteristic(ACCEL_X_UUID);
+        accelYChar = await service.getCharacteristic(ACCEL_Y_UUID);
+        accelZChar = await service.getCharacteristic(ACCEL_Z_UUID);
 
-        ledCharacteristic =
-            await service.getCharacteristic(LED_UUID);
+        gyroXChar = await service.getCharacteristic(GYRO_X_UUID);
+        gyroYChar = await service.getCharacteristic(GYRO_Y_UUID);
+        gyroZChar = await service.getCharacteristic(GYRO_Z_UUID);
 
-        //----------------------------------
+        ledChar = await service.getCharacteristic(LED_UUID);
 
-        const ledValue =
-            await ledCharacteristic.readValue();
+       
 
-        const state =
-            new TextDecoder().decode(ledValue);
+        await motionChar.startNotifications();
 
-        ledOn = (state === "ON");
+        await accelXChar.startNotifications();
+        await accelYChar.startNotifications();
+        await accelZChar.startNotifications();
 
-        ledBtn.textContent =
-            ledOn ? "Turn OFF" : "Turn ON";
+        await gyroXChar.startNotifications();
+        await gyroYChar.startNotifications();
+        await gyroZChar.startNotifications();
 
-        //----------------------------------
+        
 
-        await tempCharacteristic.startNotifications();
-
-        await humCharacteristic.startNotifications();
-
-        tempCharacteristic.addEventListener(
+        motionChar.addEventListener(
             "characteristicvaluechanged",
-            handleTemperature
+            handleMotion
         );
 
-        humCharacteristic.addEventListener(
+        accelXChar.addEventListener(
             "characteristicvaluechanged",
-            handleHumidity
+            e => ax.textContent = decode(e)
         );
 
-        connectBtn.textContent = "Connected";
+        accelYChar.addEventListener(
+            "characteristicvaluechanged",
+            e => ay.textContent = decode(e)
+        );
+
+        accelZChar.addEventListener(
+            "characteristicvaluechanged",
+            e => az.textContent = decode(e)
+        );
+
+        gyroXChar.addEventListener(
+            "characteristicvaluechanged",
+            e => gx.textContent = decode(e)
+        );
+
+        gyroYChar.addEventListener(
+            "characteristicvaluechanged",
+            e => gy.textContent = decode(e)
+        );
+
+        gyroZChar.addEventListener(
+            "characteristicvaluechanged",
+            e => gz.textContent = decode(e)
+        );
+
+       
+
+        statusText.textContent = "Connected";
+        statusText.className = "status connected";
 
         connectBtn.disabled = true;
+        connectBtn.textContent = "Connected";
 
         ledBtn.disabled = false;
 
@@ -106,83 +158,81 @@ async function connect() {
 
     }
 
-    catch (error) {
+    catch(error){
 
         console.error(error);
-
-        connectBtn.textContent = "Connect";
-
-        connectBtn.disabled = false;
 
     }
 
 }
 
-//========================================
 
-function handleTemperature(event) {
 
-    const value = new TextDecoder().decode(
-        event.target.value
-    );
+function decode(event){
 
-    tempText.textContent = value + " °C";
+    return new TextDecoder().decode(event.target.value);
 
 }
 
-//========================================
 
-function handleHumidity(event) {
 
-    const value = new TextDecoder().decode(
-        event.target.value
-    );
+function handleMotion(event){
 
-    humText.textContent = value + " %";
+    const value = decode(event);
+
+    motionText.textContent = value;
+
+    if(value === "MOVING"){
+
+        motionText.className = "motion moving";
+
+    }
+
+    else{
+
+        motionText.className = "motion stationary";
+
+    }
 
 }
 
-//========================================
 
-async function toggleLED() {
 
-    if (!ledCharacteristic) return;
+async function toggleLED(){
+
+    if(!ledChar) return;
 
     const encoder = new TextEncoder();
 
-    try {
+    try{
 
-        if (ledOn) {
+        if(ledOn){
 
-            await ledCharacteristic.writeValue(
+            await ledChar.writeValue(
                 encoder.encode("OFF")
             );
 
+            ledBtn.textContent = "Turn ON LED";
+
             ledOn = false;
-
-            ledBtn.textContent = "Turn ON";
-
-            console.log("LED OFF");
 
         }
 
-        else {
+        else{
 
-            await ledCharacteristic.writeValue(
+            await ledChar.writeValue(
                 encoder.encode("ON")
             );
 
+            ledBtn.textContent = "Turn OFF LED";
+
             ledOn = true;
-
-            ledBtn.textContent = "Turn OFF";
-
-            console.log("LED ON");
 
         }
 
     }
 
-    catch (error) {
+    catch(error){
 
         console.error(error);
 
@@ -190,28 +240,35 @@ async function toggleLED() {
 
 }
 
-//========================================
 
-function onDisconnected() {
+
+
+function onDisconnected(){
 
     console.log("Disconnected");
 
-    connectBtn.textContent = "Connect";
+    statusText.textContent = "Disconnected";
+
+    statusText.className = "status";
+
+    motionText.textContent = "--";
+
+    ax.textContent = "0.00";
+    ay.textContent = "0.00";
+    az.textContent = "0.00";
+
+    gx.textContent = "0.00";
+    gy.textContent = "0.00";
+    gz.textContent = "0.00";
 
     connectBtn.disabled = false;
 
+    connectBtn.textContent = "Connect Device";
+
     ledBtn.disabled = true;
 
-    ledBtn.textContent = "Turn ON";
-
-    tempText.textContent = "-C";
-
-    humText.textContent = "-%";
+    ledBtn.textContent = "Turn ON LED";
 
     ledOn = false;
-
-    tempCharacteristic = null;
-    humCharacteristic = null;
-    ledCharacteristic = null;
 
 }

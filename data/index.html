@@ -1,29 +1,131 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
     <title>My Tracker</title>
+
+    <link rel="stylesheet" href="style.css">
+
 </head>
+
 <body>
+
+<div class="container">
 
     <h1>My Tracker</h1>
 
-    <button id="connectBtn">Connect</button>
+   
 
-    <h2>Temperature</h2>
-    <p id="temp">- C</p>
-
-    <h2>Humidity</h2>
-    <p id="hum">- %</p>
-
-    <h3>LED Control</h3>
-
-    <button id="ledBtn" disabled>
-        Turn ON
+    <button id="connectBtn">
+        Connect Device
     </button>
 
-    <script src="script.js"></script>
+    <div class="card">
+
+        <h2>Status</h2>
+
+        <p id="status" class="status">
+            Disconnected
+        </p>
+
+    </div>
+
+    <div class="card">
+
+        <h2>Motion</h2>
+
+        <p id="motion" class="motion">
+            -
+        </p>
+
+    </div>
+
+    <div class="card">
+
+        <h2>Acceleration </h2>
+
+        <div class="grid">
+
+            <div>
+
+                <span>X</span>
+
+                <h3 id="ax">0.00</h3>
+
+            </div>
+
+            <div>
+
+                <span>Y</span>
+
+                <h3 id="ay">0.00</h3>
+
+            </div>
+
+            <div>
+
+                <span>Z</span>
+
+                <h3 id="az">0.00</h3>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="card">
+
+        <h2>Gyroscope </h2>
+
+        <div class="grid">
+
+            <div>
+
+                <span>X</span>
+
+                <h3 id="gx">0.00</h3>
+
+            </div>
+
+            <div>
+
+                <span>Y</span>
+
+                <h3 id="gy">0.00</h3>
+
+            </div>
+
+            <div>
+
+                <span>Z</span>
+
+                <h3 id="gz">0.00</h3>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <button
+        id="ledBtn"
+        disabled>
+
+        Turn ON LED
+
+    </button>
+
+</div>
+
+<script src="script.js"></script>
 
 </body>
+
 </html>

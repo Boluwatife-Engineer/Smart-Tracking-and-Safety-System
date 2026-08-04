@@ -1,203 +1,233 @@
 #include <Arduino.h>
-#include <WiFi.h>
-#include <ESPAsyncWebServer.h>
-#include <LittleFS.h>
-
 #include <NimBLEDevice.h>
-#include <DHT.h>
 
-#define DHTPIN 4
-#define DHTTYPE DHT22
+#include "mpu6050.h"
 
-#define LED_PIN 8
+#define LED_PIN 4
 
-DHT dht(DHTPIN, DHTTYPE);
-
-AsyncWebServer server(80);
-
-//WiFi 
-
-const char* ssid = "TIFEH100";
-const char* password = "Doyouknowlade^";
-
-//BLE UUID
+//UUIDS
 
 #define SERVICE_UUID "6f1f9ea6-76b7-4460-918b-5fa33f709630"
 
-#define TEMP_UUID "bc35d307-d854-44ca-96fd-f5e5e08fd3c4"
-#define HUM_UUID  "b6042e4d-e374-4666-8159-aecd1e097b5c"
-#define LED_UUID  "dabed4fd-f792-443f-b186-3da384f9d673"
+#define MOTION_UUID "11111111-1111-1111-1111-111111111111"
+
+#define ACCEL_X_UUID "22222222-2222-2222-2222-222222222221"
+#define ACCEL_Y_UUID "22222222-2222-2222-2222-222222222222"
+#define ACCEL_Z_UUID "22222222-2222-2222-2222-222222222223"
+
+#define GYRO_X_UUID "33333333-3333-3333-3333-333333333331"
+#define GYRO_Y_UUID "33333333-3333-3333-3333-333333333332"
+#define GYRO_Z_UUID "33333333-3333-3333-3333-333333333333"
+
+#define LED_UUID "dabed4fd-f792-443f-b186-3da384f9d673"
 
 
-NimBLECharacteristic *tempCharacteristic;
-NimBLECharacteristic *humCharacteristic;
-NimBLECharacteristic *ledCharacteristic;
 
 bool deviceConnected = false;
 
-//BLE SERVER CALLBACK
+NimBLECharacteristic *motionChar;
+
+NimBLECharacteristic *accelXChar;
+NimBLECharacteristic *accelYChar;
+NimBLECharacteristic *accelZChar;
+
+NimBLECharacteristic *gyroXChar;
+NimBLECharacteristic *gyroYChar;
+NimBLECharacteristic *gyroZChar;
+
+NimBLECharacteristic *ledChar;
+
+
+
 class ServerCallbacks : public NimBLEServerCallbacks {
 
-    void onConnect(NimBLEServer*,
-                   NimBLEConnInfo&) override {
+    void onConnect(NimBLEServer*, NimBLEConnInfo&) override {
 
         deviceConnected = true;
 
         Serial.println("BLE Connected");
+
     }
 
-    void onDisconnect(NimBLEServer*,
-                      NimBLEConnInfo&,
-                      int) override {
+    void onDisconnect(
+        NimBLEServer*,
+        NimBLEConnInfo&,
+        int
+    ) override {
 
         deviceConnected = false;
 
         Serial.println("BLE Disconnected");
 
         NimBLEDevice::startAdvertising();
+
     }
+
 };
 
-//LED CALLBACK
+
 
 class LedCallbacks : public NimBLECharacteristicCallbacks {
 
-    void onWrite(NimBLECharacteristic *characteristic,
-                 NimBLEConnInfo&) override {
+    void onWrite(
+        NimBLECharacteristic *characteristic,
+        NimBLEConnInfo&
+    ) override {
 
         std::string value = characteristic->getValue();
 
-        Serial.print("Received: ");
-        Serial.println(value.c_str());
-
-        if (value == "ON") {
-
-            digitalWrite(LED_PIN, LOW);
+        if(value == "ON")
+        {
+            digitalWrite(LED_PIN, HIGH);
 
             characteristic->setValue("ON");
 
             Serial.println("LED ON");
         }
 
-        else if (value == "OFF") {
-
-            digitalWrite(LED_PIN, HIGH);
+        else if(value == "OFF")
+        {
+            digitalWrite(LED_PIN, LOW);
 
             characteristic->setValue("OFF");
 
             Serial.println("LED OFF");
         }
+
     }
+
 };
 
-
-
-void setup() {
+void setup()
+{
 
     Serial.begin(115200);
 
-    delay(3000);
+    delay(2000);
 
-    Serial.println("SETUP STARTED");
+    pinMode(LED_PIN,OUTPUT);
 
+    digitalWrite(LED_PIN,LOW);
 
-    pinMode(LED_PIN, OUTPUT);
-    digitalWrite(LED_PIN, HIGH);
+    Serial.println("Smart Tracker");
 
-    dht.begin();
+   
 
-    //LITTLEFS
+    if(!initMPU())
+    {
+        Serial.println("MPU Failed");
 
-    if (!LittleFS.begin()) {
-
-        Serial.println("LittleFS Mount Failed");
-
-        while (true);
-
+        while(true);
     }
 
-    Serial.println("LittleFS Mounted");
-
-    
-    // WiFi Station
-    
-
-    WiFi.mode(WIFI_STA);
-
-    WiFi.begin(ssid, password);
-
-    Serial.print("Connecting to WiFi");
-
-    while (WiFi.status() != WL_CONNECTED) {
-
-        delay(500);
-        Serial.print(".");
-
-    }
-
-    Serial.println();
-    Serial.println("--------------------------------");
-    Serial.println("WiFi Connected");
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.localIP());
-    Serial.println("--------------------------------");
-
-   
-    // Web Server
    
 
-    server.serveStatic("/", LittleFS, "/")
-          .setDefaultFile("index.html");
+    NimBLEDevice::init("Smart Tracker");
 
-    server.begin();
+    NimBLEServer *server =
+        NimBLEDevice::createServer();
 
-    Serial.println("Web Server Started");
-
-    
-    // BLE
-   
-
-    NimBLEDevice::init("My Tracker");
-
-    NimBLEServer *bleServer = NimBLEDevice::createServer();
-
-    bleServer->setCallbacks(new ServerCallbacks());
+    server->setCallbacks(new ServerCallbacks());
 
     NimBLEService *service =
-        bleServer->createService(SERVICE_UUID);
+        server->createService(SERVICE_UUID);
 
-    tempCharacteristic =
+    //MOTION (MPU6050)
+
+    motionChar =
         service->createCharacteristic(
 
-            TEMP_UUID,
+            MOTION_UUID,
 
             NIMBLE_PROPERTY::READ |
             NIMBLE_PROPERTY::NOTIFY
+
         );
 
-    humCharacteristic =
+   //ACCELEROMETER
+
+    accelXChar =
         service->createCharacteristic(
 
-            HUM_UUID,
+            ACCEL_X_UUID,
 
             NIMBLE_PROPERTY::READ |
             NIMBLE_PROPERTY::NOTIFY
+
         );
 
-    ledCharacteristic =
+    accelYChar =
+        service->createCharacteristic(
+
+            ACCEL_Y_UUID,
+
+            NIMBLE_PROPERTY::READ |
+            NIMBLE_PROPERTY::NOTIFY
+
+        );
+
+    accelZChar =
+        service->createCharacteristic(
+
+            ACCEL_Z_UUID,
+
+            NIMBLE_PROPERTY::READ |
+            NIMBLE_PROPERTY::NOTIFY
+
+        );
+
+    //GYROSCOPE
+
+    gyroXChar =
+        service->createCharacteristic(
+
+            GYRO_X_UUID,
+
+            NIMBLE_PROPERTY::READ |
+            NIMBLE_PROPERTY::NOTIFY
+
+        );
+
+    gyroYChar =
+        service->createCharacteristic(
+
+            GYRO_Y_UUID,
+
+            NIMBLE_PROPERTY::READ |
+            NIMBLE_PROPERTY::NOTIFY
+
+        );
+
+    gyroZChar =
+        service->createCharacteristic(
+
+            GYRO_Z_UUID,
+
+            NIMBLE_PROPERTY::READ |
+            NIMBLE_PROPERTY::NOTIFY
+
+        );
+
+
+    //LED
+
+    ledChar =
         service->createCharacteristic(
 
             LED_UUID,
 
             NIMBLE_PROPERTY::READ |
             NIMBLE_PROPERTY::WRITE
+
         );
 
-    ledCharacteristic->setCallbacks(new LedCallbacks());
+    ledChar->setCallbacks(new LedCallbacks());
 
-    ledCharacteristic->setValue("OFF");
+    ledChar->setValue("OFF");
 
-    bleServer->start();
+
+
+    service->start();
 
     NimBLEAdvertising *advertising =
         NimBLEDevice::getAdvertising();
@@ -206,45 +236,84 @@ void setup() {
 
     advertising->enableScanResponse(true);
 
-    advertising->setName("My Tracker");
+    advertising->setName("Smart Tracker");
 
     advertising->start();
 
-    Serial.println("BLE Advertising Started");
+    Serial.println("Advertising Started");
+
 }
 
 
 
-void loop() {
+void loop()
+{
 
-    float temperature = dht.readTemperature();
+    updateMPU();
 
-    float humidity = dht.readHumidity();
+    float ax = getAccelX();
+    float ay = getAccelY();
+    float az = getAccelZ();
 
-    if (!isnan(temperature) && !isnan(humidity)) {
+    float gx = getGyroX();
+    float gy = getGyroY();
+    float gz = getGyroZ();
 
-        Serial.printf(
-            "T: %.1f°C   H: %.1f%%\n",
-            temperature,
-            humidity
+    //MOTION DETECTION
+
+    bool moving =
+
+        abs(gx) > 5 ||
+
+        abs(gy) > 5 ||
+
+        abs(gz) > 5;
+
+    
+
+    Serial.printf(
+
+        "Motion: %s\n",
+
+        moving ? "MOVING" : "STATIONARY"
+
+    );
+
+    
+
+    if(deviceConnected)
+    {
+
+        motionChar->setValue(
+
+            moving ?
+
+            "MOVING" :
+
+            "STATIONARY"
+
         );
 
-        if (deviceConnected) {
+        motionChar->notify();
 
-            tempCharacteristic->setValue(
-                String(temperature, 1).c_str());
+        accelXChar->setValue(String(ax,2).c_str());
+        accelYChar->setValue(String(ay,2).c_str());
+        accelZChar->setValue(String(az,2).c_str());
 
-            tempCharacteristic->notify();
+        gyroXChar->setValue(String(gx,2).c_str());
+        gyroYChar->setValue(String(gy,2).c_str());
+        gyroZChar->setValue(String(gz,2).c_str());
 
-            humCharacteristic->setValue(
-                String(humidity, 1).c_str());
+        accelXChar->notify();
+        accelYChar->notify();
+        accelZChar->notify();
 
-            humCharacteristic->notify();
-
-        }
+        gyroXChar->notify();
+        gyroYChar->notify();
+        gyroZChar->notify();
 
     }
 
-    delay(2000);
+    delay(200);
 
 }

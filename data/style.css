@@ -1,0 +1,223 @@
+@import url('https://fonts.googleapis.com/css2?family=Indie+Flower&family=Lexend:wght@100..900&family=Montserrat+Alternates:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Playwrite+GB+S+Guides:ital@0;1&family=Space+Grotesk:wght@300..700&family=Urbanist:ital,wght@0,100..900;1,100..900&display=swap');
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Lexend, sans-serif;
+}
+
+body{
+
+    background:white;
+
+    color:black;
+
+    display:flex;
+
+    justify-content:center;
+
+    padding:40px;
+
+}
+
+.container{
+
+    width:100%;
+
+    max-width:700px;
+
+}
+
+h1{
+
+    font-size:38px;
+
+    text-align:center;
+
+    margin-bottom:8px;
+
+}
+
+.subtitle{
+
+    text-align:center;
+
+    color:#94a3b8;
+
+    margin-bottom:30px;
+
+}
+
+button{
+
+    width:100%;
+
+    padding:16px;
+
+    border:none;
+
+    border-radius:14px;
+
+    font-size:18px;
+
+    cursor:pointer;
+
+    transition:.25s;
+
+}
+
+#connectBtn{
+
+    background:#2563eb;
+
+    color:white;
+
+    margin-bottom:25px;
+
+}
+
+#connectBtn:hover{
+
+    background:#1d4ed8;
+
+}
+
+#ledBtn{
+
+    background:#16a34a;
+
+    color:white;
+
+    margin-top:25px;
+
+}
+
+#ledBtn:hover{
+
+    background:#15803d;
+
+}
+
+button:disabled{
+
+    opacity:.6;
+
+    cursor:not-allowed;
+
+}
+
+.card{
+
+    background:black;
+
+    border-radius:18px;
+
+    padding:25px;
+
+    margin-bottom:20px;
+
+    box-shadow:0 8px 20px rgba(0,0,0,.25);
+
+}
+
+.card h2{
+
+    margin-bottom:20px;
+
+    color:#cbd5e1;
+
+}
+
+.grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(3,1fr);
+
+    gap:18px;
+
+}
+
+.grid div{
+
+    background:#bcc3cd;
+
+    border-radius:12px;
+
+    padding:20px;
+
+    text-align:center;
+
+}
+
+.grid span{
+
+    color:#94a3b8;
+
+    display:block;
+
+    margin-bottom:8px;
+
+}
+
+.grid h3{
+
+    font-size:28px;
+
+}
+
+.status{
+
+    font-size:22px;
+
+    font-weight:bold;
+
+    color:#ef4444;
+
+}
+
+.motion{
+
+    font-size:30px;
+
+    font-weight:bold;
+
+    text-align:center;
+
+    color:#facc15;
+
+}
+
+.connected{
+
+    color:#22c55e;
+
+}
+
+.moving{
+
+    color:#f97316;
+
+}
+
+.stationary{
+
+    color:#22c55e;
+
+}
+
+@media(max-width:650px){
+
+    .grid{
+
+        grid-template-columns:1fr;
+
+    }
+
+    h1{
+
+        font-size:30px;
+
+    }
+
+}
