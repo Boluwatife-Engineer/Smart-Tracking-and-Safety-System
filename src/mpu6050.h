@@ -7,6 +7,13 @@ bool initMPU();
 
 void updateMPU();
 
+bool isMoving();
+
+void setMotionThresholds(
+    float accelThreshold,
+    float gyroThreshold
+);
+
 float getAccelX();
 float getAccelY();
 float getAccelZ();

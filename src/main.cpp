@@ -248,8 +248,9 @@ void setup()
 
 void loop()
 {
-
     updateMPU();
+
+    bool moving = isMoving();
 
     float ax = getAccelX();
     float ay = getAccelY();
@@ -259,41 +260,24 @@ void loop()
     float gy = getGyroY();
     float gz = getGyroZ();
 
-    //MOTION DETECTION
-
-    bool moving =
-
-        abs(gx) > 5 ||
-
-        abs(gy) > 5 ||
-
-        abs(gz) > 5;
-
-    
-
     Serial.printf(
-
-        "Motion: %s\n",
-
+        "Accel: %.2f %.2f %.2f | Gyro: %.2f %.2f %.2f | %s\n",
+        ax,
+        ay,
+        az,
+        gx,
+        gy,
+        gz,
         moving ? "MOVING" : "STATIONARY"
-
     );
-
-    
 
     if(deviceConnected)
     {
-
         motionChar->setValue(
-
             moving ?
-
             "MOVING" :
-
             "STATIONARY"
-
         );
-
         motionChar->notify();
 
         accelXChar->setValue(String(ax,2).c_str());
@@ -311,9 +295,7 @@ void loop()
         gyroXChar->notify();
         gyroYChar->notify();
         gyroZChar->notify();
-
     }
 
-    delay(200);
-
+    delay(100);
 }
