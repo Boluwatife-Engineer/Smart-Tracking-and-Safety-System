@@ -10,6 +10,7 @@
 #define SERVICE_UUID "6f1f9ea6-76b7-4460-918b-5fa33f709630"
 
 #define MOTION_UUID "11111111-1111-1111-1111-111111111111"
+#define LAST_SEEN_UUID "44444444-4444-4444-4444-444444444444"
 
 #define ACCEL_X_UUID "22222222-2222-2222-2222-222222222221"
 #define ACCEL_Y_UUID "22222222-2222-2222-2222-222222222222"
@@ -26,6 +27,7 @@
 bool deviceConnected = false;
 
 NimBLECharacteristic *motionChar;
+NimBLECharacteristic *lastSeenChar;
 
 NimBLECharacteristic *accelXChar;
 NimBLECharacteristic *accelYChar;
@@ -98,6 +100,21 @@ class LedCallbacks : public NimBLECharacteristicCallbacks {
 
 };
 
+class LastSeenCallbacks : public NimBLECharacteristicCallbacks
+{
+    void onWrite(
+        NimBLECharacteristic *characteristic,
+        NimBLEConnInfo&) override
+    {
+        std::string value = characteristic->getValue();
+
+        characteristic->setValue(value);
+
+        Serial.print("Last Seen Updated: ");
+        Serial.println(value.c_str());
+    }
+};
+
 void setup()
 {
 
@@ -143,6 +160,20 @@ void setup()
             NIMBLE_PROPERTY::NOTIFY
 
         );
+
+    lastSeenChar =
+        service->createCharacteristic(
+
+            LAST_SEEN_UUID,
+
+            NIMBLE_PROPERTY::READ |
+            NIMBLE_PROPERTY::WRITE
+
+        );
+
+    lastSeenChar->setCallbacks(new LastSeenCallbacks());
+
+    lastSeenChar->setValue("No Last Seen");
 
    //ACCELEROMETER
 
@@ -227,7 +258,7 @@ void setup()
 
 
 
-    service->start();
+    
 
     NimBLEAdvertising *advertising =
         NimBLEDevice::getAdvertising();

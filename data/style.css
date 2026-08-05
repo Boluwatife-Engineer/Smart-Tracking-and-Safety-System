@@ -92,6 +92,16 @@ button{
 
 }
 
+.btnn{
+
+    background:#2563eb;
+
+    color:white;
+
+    margin-top:25px;
+
+}   
+
 #ledBtn:hover{
 
     background:#15803d;
