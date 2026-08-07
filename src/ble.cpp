@@ -5,6 +5,7 @@
 
 #include "mpu6050.h"
 #include "storage.h"
+#include "battery.h"
 
 #define LED_PIN 4
 
@@ -23,6 +24,8 @@
 #define GYRO_Y_UUID "33333333-3333-3333-3333-333333333332"
 #define GYRO_Z_UUID "33333333-3333-3333-3333-333333333333"
 
+#define BATTERY_UUID "55555555-5555-5555-5555-555555555555"
+
 #define LED_UUID "dabed4fd-f792-443f-b186-3da384f9d673"
 
 //================ BLE STATE =================//
@@ -40,6 +43,7 @@ NimBLECharacteristic *gyroXChar;
 NimBLECharacteristic *gyroYChar;
 NimBLECharacteristic *gyroZChar;
 
+NimBLECharacteristic *batteryChar;
 NimBLECharacteristic *ledChar;
 
 //================ SERVER CALLBACK =================//
@@ -49,7 +53,6 @@ class ServerCallbacks : public NimBLEServerCallbacks
     void onConnect(NimBLEServer *, NimBLEConnInfo &) override
     {
         deviceConnected = true;
-
         Serial.println("BLE Connected");
     }
 
@@ -110,18 +113,14 @@ class LastSeenCallbacks : public NimBLECharacteristicCallbacks
         saveLastSeen(String(value.c_str()));
 
         Serial.println("Last Seen Updated:");
-
         Serial.println(value.c_str());
     }
 };
-
-//================ PUBLIC FUNCTION =================//
 
 bool isBLEConnected()
 {
     return deviceConnected;
 }
-//================ INIT BLE =================//
 
 void initBLE()
 {
@@ -142,127 +141,102 @@ void initBLE()
 
     motionChar =
         service->createCharacteristic(
-
             MOTION_UUID,
-
             NIMBLE_PROPERTY::READ |
-            NIMBLE_PROPERTY::NOTIFY
-
-        );
+            NIMBLE_PROPERTY::NOTIFY);
 
     //================ LAST SEEN =================//
 
     lastSeenChar =
         service->createCharacteristic(
-
             LAST_SEEN_UUID,
-
             NIMBLE_PROPERTY::READ |
-            NIMBLE_PROPERTY::WRITE
-
-        );
+            NIMBLE_PROPERTY::WRITE);
 
     lastSeenChar->setCallbacks(
-        new LastSeenCallbacks()
-    );
+        new LastSeenCallbacks());
 
     String savedLastSeen =
         loadLastSeen();
 
     lastSeenChar->setValue(
-        savedLastSeen.c_str()
-    );
+        savedLastSeen.c_str());
 
-    //================ ACCEL =================//
+    //================ BATTERY =================//
+
+    batteryChar =
+        service->createCharacteristic(
+            BATTERY_UUID,
+            NIMBLE_PROPERTY::READ |
+            NIMBLE_PROPERTY::NOTIFY);
+
+    uint8_t level = getBatteryLevel();
+
+    batteryChar->setValue(&level, 1);
+
+        //================ ACCELEROMETER =================//
 
     accelXChar =
         service->createCharacteristic(
-
             ACCEL_X_UUID,
-
             NIMBLE_PROPERTY::READ |
-            NIMBLE_PROPERTY::NOTIFY
-
-        );
+            NIMBLE_PROPERTY::NOTIFY);
 
     accelYChar =
         service->createCharacteristic(
-
             ACCEL_Y_UUID,
-
             NIMBLE_PROPERTY::READ |
-            NIMBLE_PROPERTY::NOTIFY
-
-        );
+            NIMBLE_PROPERTY::NOTIFY);
 
     accelZChar =
         service->createCharacteristic(
-
             ACCEL_Z_UUID,
-
             NIMBLE_PROPERTY::READ |
-            NIMBLE_PROPERTY::NOTIFY
+            NIMBLE_PROPERTY::NOTIFY);
 
-        );
-
-    //================ GYRO =================//
+    //================ GYROSCOPE =================//
 
     gyroXChar =
         service->createCharacteristic(
-
             GYRO_X_UUID,
-
             NIMBLE_PROPERTY::READ |
-            NIMBLE_PROPERTY::NOTIFY
-
-        );
+            NIMBLE_PROPERTY::NOTIFY);
 
     gyroYChar =
         service->createCharacteristic(
-
             GYRO_Y_UUID,
-
             NIMBLE_PROPERTY::READ |
-            NIMBLE_PROPERTY::NOTIFY
-
-        );
+            NIMBLE_PROPERTY::NOTIFY);
 
     gyroZChar =
         service->createCharacteristic(
-
             GYRO_Z_UUID,
-
             NIMBLE_PROPERTY::READ |
-            NIMBLE_PROPERTY::NOTIFY
-
-        );
+            NIMBLE_PROPERTY::NOTIFY);
 
     //================ LED =================//
 
     ledChar =
         service->createCharacteristic(
-
             LED_UUID,
-
             NIMBLE_PROPERTY::READ |
-            NIMBLE_PROPERTY::WRITE
-
-        );
+            NIMBLE_PROPERTY::WRITE);
 
     ledChar->setCallbacks(
-        new LedCallbacks()
-    );
+        new LedCallbacks());
 
     ledChar->setValue("OFF");
 
-    //================ START SERVICE =================//
+    //================ START ADVERTISING =================//
+
+    // Remove this line if your NimBLE version says service->start() is deprecated
+    service->start();
 
     NimBLEAdvertising *advertising =
         NimBLEDevice::getAdvertising();
 
     advertising->addServiceUUID(
-        SERVICE_UUID
-    );
+        SERVICE_UUID);
 
     advertising->enableScanResponse(true);
 
@@ -272,6 +246,7 @@ void initBLE()
 
     Serial.println("Advertising Started");
 }
+
 //================ UPDATE BLE =================//
 
 void updateBLE()
@@ -292,23 +267,26 @@ void updateBLE()
     float gz = getGyroZ();
 
     Serial.printf(
-        "Accel: %.2f %.2f %.2f | Gyro: %.2f %.2f %.2f | %s\n",
+        "Accel: %.2f %.2f %.2f | Gyro: %.2f %.2f %.2f | %s | Battery: %d%%\n",
         ax,
         ay,
         az,
         gx,
         gy,
         gz,
+        moving ? "MOVING" : "STATIONARY",
+        getBatteryLevel()
+    );
+
+    // Motion
+
+    motionChar->setValue(
         moving ? "MOVING" : "STATIONARY"
     );
 
-    motionChar->setValue(
-        moving ?
-        "MOVING" :
-        "STATIONARY"
-    );
-
     motionChar->notify();
+
+    // Accelerometer
 
     accelXChar->setValue(
         String(ax, 2).c_str()
@@ -322,6 +300,12 @@ void updateBLE()
         String(az, 2).c_str()
     );
 
+    accelXChar->notify();
+    accelYChar->notify();
+    accelZChar->notify();
+
+    // Gyroscope
+
     gyroXChar->setValue(
         String(gx, 2).c_str()
     );
@@ -334,11 +318,15 @@ void updateBLE()
         String(gz, 2).c_str()
     );
 
-    accelXChar->notify();
-    accelYChar->notify();
-    accelZChar->notify();
-
     gyroXChar->notify();
     gyroYChar->notify();
     gyroZChar->notify();
+
+    // Battery
+
+    uint8_t level = getBatteryLevel();
+
+    batteryChar->setValue(&level, 1);
+
+    batteryChar->notify();
 }

@@ -1,22 +1,23 @@
-@import url('https://fonts.googleapis.com/css2?family=Indie+Flower&family=Lexend:wght@100..900&family=Montserrat+Alternates:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Playwrite+GB+S+Guides:ital@0;1&family=Space+Grotesk:wght@300..700&family=Urbanist:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap');
+
 *{
     margin:0;
     padding:0;
     box-sizing:border-box;
-    font-family:Lexend, sans-serif;
+    font-family:"Lexend",sans-serif;
 }
 
 body{
 
-    background:white;
+    background:#f4f7fb;
 
-    color:black;
+    color:#111827;
 
     display:flex;
 
     justify-content:center;
 
-    padding:40px;
+    padding:40px 20px;
 
 }
 
@@ -24,27 +25,19 @@ body{
 
     width:100%;
 
-    max-width:700px;
+    max-width:720px;
 
 }
 
 h1{
 
+    text-align:center;
+
     font-size:38px;
 
-    text-align:center;
-
-    margin-bottom:8px;
-
-}
-
-.subtitle{
-
-    text-align:center;
-
-    color:#94a3b8;
-
     margin-bottom:30px;
+
+    font-weight:700;
 
 }
 
@@ -52,19 +45,29 @@ button{
 
     width:100%;
 
-    padding:16px;
-
     border:none;
 
     border-radius:14px;
 
-    font-size:18px;
+    padding:16px;
+
+    font-size:17px;
 
     cursor:pointer;
 
     transition:.25s;
 
 }
+
+button:disabled{
+
+    opacity:.6;
+
+    cursor:not-allowed;
+
+}
+
+/* CONNECT */
 
 #connectBtn{
 
@@ -82,6 +85,8 @@ button{
 
 }
 
+/* LED */
+
 #ledBtn{
 
     background:#16a34a;
@@ -92,33 +97,43 @@ button{
 
 }
 
-.btnn{
-
-    background:#2563eb;
-
-    color:white;
-
-    margin-top:25px;
-
-}   
-
 #ledBtn:hover{
 
     background:#15803d;
 
 }
 
-button:disabled{
+/* LAST SEEN */
 
-    opacity:.6;
+.button-group{
 
-    cursor:not-allowed;
+    display:flex;
+
+    gap:15px;
+
+    margin-top:20px;
 
 }
 
+.btnn{
+
+    background:#2563eb;
+
+    color:white;
+
+}
+
+.btnn:hover{
+
+    background:#1d4ed8;
+
+}
+
+/* CARDS */
+
 .card{
 
-    background:black;
+    background:white;
 
     border-radius:18px;
 
@@ -126,7 +141,8 @@ button:disabled{
 
     margin-bottom:20px;
 
-    box-shadow:0 8px 20px rgba(0,0,0,.25);
+    box-shadow:
+        0 10px 25px rgba(0,0,0,.08);
 
 }
 
@@ -134,51 +150,19 @@ button:disabled{
 
     margin-bottom:20px;
 
-    color:#cbd5e1;
+    font-size:22px;
+
+    color:#1f2937;
 
 }
 
-.grid{
-
-    display:grid;
-
-    grid-template-columns:repeat(3,1fr);
-
-    gap:18px;
-
-}
-
-.grid div{
-
-    background:#bcc3cd;
-
-    border-radius:12px;
-
-    padding:20px;
-
-    text-align:center;
-
-}
-
-.grid span{
-
-    color:#94a3b8;
-
-    display:block;
-
-    margin-bottom:8px;
-
-}
-
-.grid h3{
-
-    font-size:28px;
-
-}
+/* STATUS */
 
 .status{
 
-    font-size:22px;
+    text-align:center;
+
+    font-size:26px;
 
     font-weight:bold;
 
@@ -186,21 +170,37 @@ button:disabled{
 
 }
 
-.motion{
-
-    font-size:30px;
-
-    font-weight:bold;
-
-    text-align:center;
-
-    color:#facc15;
-
-}
-
 .connected{
 
     color:#22c55e;
+
+}
+
+/* BATTERY */
+
+.battery{
+
+    text-align:center;
+
+    font-size:34px;
+
+    font-weight:bold;
+
+    color:#22c55e;
+
+}
+
+/* MOTION */
+
+.motion{
+
+    text-align:center;
+
+    font-size:34px;
+
+    font-weight:bold;
+
+    color:#f59e0b;
 
 }
 
@@ -216,7 +216,65 @@ button:disabled{
 
 }
 
-@media(max-width:650px){
+/* SENSOR GRID */
+
+.grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(3,1fr);
+
+    gap:16px;
+
+}
+
+.grid div{
+
+    background:#f3f4f6;
+
+    border-radius:14px;
+
+    padding:20px;
+
+    text-align:center;
+
+}
+
+.grid span{
+
+    display:block;
+
+    color:#6b7280;
+
+    margin-bottom:10px;
+
+    font-size:15px;
+
+}
+
+.grid h3{
+
+    font-size:28px;
+
+    color:#111827;
+
+}
+
+/* RESPONSIVE */
+
+@media (max-width:700px){
+
+    body{
+
+        padding:20px;
+
+    }
+
+    h1{
+
+        font-size:30px;
+
+    }
 
     .grid{
 
@@ -224,9 +282,21 @@ button:disabled{
 
     }
 
-    h1{
+    .button-group{
 
-        font-size:30px;
+        flex-direction:column;
+
+    }
+
+    .battery{
+
+        font-size:28px;
+
+    }
+
+    .motion{
+
+        font-size:28px;
 
     }
 

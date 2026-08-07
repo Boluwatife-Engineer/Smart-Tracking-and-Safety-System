@@ -3,6 +3,7 @@
 #include "mpu6050.h"
 #include "storage.h"
 #include "ble.h"
+#include "battery.h"
 
 void setup()
 {
@@ -10,9 +11,9 @@ void setup()
 
     delay(2000);
 
-    Serial.println("Smart Tracker");
-
     initStorage();
+
+    initBattery();
 
     if (!initMPU())
     {
@@ -22,6 +23,8 @@ void setup()
     }
 
     initBLE();
+
+    Serial.println("Smart Tracker");
 }
 
 void loop()

@@ -5,135 +5,197 @@
 
     <meta charset="UTF-8">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
 
-    <title>My Tracker</title>
+    <title>My Tracker Dashboard</title>
 
-    <link rel="stylesheet" href="style.css">
+    <link
+        rel="stylesheet"
+        href="style.css">
 
 </head>
 
 <body>
 
-<div class="container">
+    <div class="container">
 
-    <h1>My Tracker</h1>
+        <h1>My Tracker</h1>
 
-   
+        <button id="connectBtn">
+            Connect Device
+        </button>
 
-    <button id="connectBtn">
-        Connect Device
-    </button>
+        <!-- STATUS -->
 
-    <div class="card">
+        <div class="card">
 
-        <h2>Status</h2>
+            <h2>Status</h2>
 
-        <p id="status" class="status">
-            Disconnected
-        </p>
+            <p
+                id="status"
+                class="status">
 
-    </div>
+                Disconnected
 
-    <div class="card">
+            </p>
 
-        <h2>Motion</h2>
+        </div>
 
-        <p id="motion" class="motion">
-            -
-        </p>
+        <!-- BATTERY -->
 
-    </div>
+        <div class="card">
 
-    <div class="card">
+            <h2>Battery</h2>
 
-        <h2>Acceleration </h2>
+            <p class="battery">
 
-        <div class="grid">
+                <span id="battery">
+                    -
+                </span>%
 
-            <div>
+            </p>
 
-                <span>X</span>
+        </div>
 
-                <h3 id="ax">0.00</h3>
+        <!-- MOTION -->
 
-            </div>
+        <div class="card">
 
-            <div>
+            <h2>Motion</h2>
 
-                <span>Y</span>
+            <p
+                id="motion"
+                class="motion">
 
-                <h3 id="ay">0.00</h3>
+                -
 
-            </div>
+            </p>
 
-            <div>
+        </div>
 
-                <span>Z</span>
+        <!-- ACCEL -->
 
-                <h3 id="az">0.00</h3>
+        <div class="card">
+
+            <h2>Acceleration</h2>
+
+            <div class="grid">
+
+                <div>
+
+                    <span>X</span>
+
+                    <h3 id="ax">
+                        0.00
+                    </h3>
+
+                </div>
+
+                <div>
+
+                    <span>Y</span>
+
+                    <h3 id="ay">
+                        0.00
+                    </h3>
+
+                </div>
+
+                <div>
+
+                    <span>Z</span>
+
+                    <h3 id="az">
+                        0.00
+                    </h3>
+
+                </div>
 
             </div>
 
         </div>
 
-    </div>
+        <!-- GYRO -->
 
-    <div class="card">
+        <div class="card">
 
-        <h2>Gyroscope </h2>
+            <h2>Gyroscope</h2>
 
-        <div class="grid">
+            <div class="grid">
 
-            <div>
+                <div>
 
-                <span>X</span>
+                    <span>X</span>
 
-                <h3 id="gx">0.00</h3>
+                    <h3 id="gx">
+                        0.00
+                    </h3>
 
-            </div>
+                </div>
 
-            <div>
+                <div>
 
-                <span>Y</span>
+                    <span>Y</span>
 
-                <h3 id="gy">0.00</h3>
+                    <h3 id="gy">
+                        0.00
+                    </h3>
 
-            </div>
+                </div>
 
-            <div>
+                <div>
 
-                <span>Z</span>
+                    <span>Z</span>
 
-                <h3 id="gz">0.00</h3>
+                    <h3 id="gz">
+                        0.00
+                    </h3>
+
+                </div>
 
             </div>
 
         </div>
 
+        <!-- LED -->
+
+        <button
+            id="ledBtn"
+            disabled>
+
+            Turn ON LED
+
+        </button>
+
+        <!-- LAST SEEN -->
+
+        <div class="button-group">
+
+            <button
+                id="writeLastSeenBtn"
+                class="btnn"
+                disabled>
+
+                Write Last Seen
+
+            </button>
+
+            <button
+                id="readLastSeenBtn"
+                class="btnn"
+                disabled>
+
+                Read Last Seen
+
+            </button>
+
+        </div>
+
     </div>
 
-    <button
-        id="ledBtn"
-        disabled>
-
-        Turn ON LED
-
-    </button>
-
-
-    <button id="writeLastSeenBtn" disabled class="btnn">
-        Write Last Seen
-    </button>
-
-    <button id="readLastSeenBtn" disabled class="btnn">
-        Read Last Seen
-</button>
-
-</div>
-
-<script src="script.js"></script>
+    <script src="script.js"></script>
 
 </body>
 

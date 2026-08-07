@@ -1,4 +1,4 @@
-// UUIDS
+//UUIDS 
 
 const SERVICE_UUID = "6f1f9ea6-76b7-4460-918b-5fa33f709630";
 
@@ -13,9 +13,12 @@ const GYRO_X_UUID = "33333333-3333-3333-3333-333333333331";
 const GYRO_Y_UUID = "33333333-3333-3333-3333-333333333332";
 const GYRO_Z_UUID = "33333333-3333-3333-3333-333333333333";
 
+const BATTERY_UUID = "55555555-5555-5555-5555-555555555555";
+
 const LED_UUID = "dabed4fd-f792-443f-b186-3da384f9d673";
 
-// ELEMENTS
+
+
 
 const connectBtn = document.getElementById("connectBtn");
 const ledBtn = document.getElementById("ledBtn");
@@ -25,6 +28,7 @@ const readLastSeenBtn = document.getElementById("readLastSeenBtn");
 
 const statusText = document.getElementById("status");
 const motionText = document.getElementById("motion");
+const batteryText = document.getElementById("battery");
 
 const ax = document.getElementById("ax");
 const ay = document.getElementById("ay");
@@ -34,7 +38,8 @@ const gx = document.getElementById("gx");
 const gy = document.getElementById("gy");
 const gz = document.getElementById("gz");
 
-// BLE
+
+//================ BLE VARIABLES ================//
 
 let device;
 let server;
@@ -51,21 +56,22 @@ let gyroXChar;
 let gyroYChar;
 let gyroZChar;
 
+let batteryChar;
 let ledChar;
 
 let ledOn = false;
 
-// EVENTS
+
+//================ EVENTS ================//
 
 connectBtn.addEventListener("click", connect);
-
 ledBtn.addEventListener("click", toggleLED);
 
 writeLastSeenBtn.addEventListener("click", writeLastSeen);
-
 readLastSeenBtn.addEventListener("click", readLastSeen);
 
-// CONNECT
+
+//================ CONNECT ================//
 
 async function connect() {
 
@@ -79,7 +85,9 @@ async function connect() {
                 }
             ],
 
-            optionalServices: [SERVICE_UUID]
+            optionalServices: [
+                SERVICE_UUID
+            ]
 
         });
 
@@ -90,37 +98,60 @@ async function connect() {
 
         server = await device.gatt.connect();
 
-        service = await server.getPrimaryService(SERVICE_UUID);
+        service =
+            await server.getPrimaryService(
+                SERVICE_UUID
+            );
 
-        // Characteristics
-
-        motionChar = await service.getCharacteristic(MOTION_UUID);
+        motionChar =
+            await service.getCharacteristic(
+                MOTION_UUID
+            );
 
         lastSeenChar =
-            await service.getCharacteristic(LAST_SEEN_UUID);
+            await service.getCharacteristic(
+                LAST_SEEN_UUID
+            );
 
         accelXChar =
-            await service.getCharacteristic(ACCEL_X_UUID);
+            await service.getCharacteristic(
+                ACCEL_X_UUID
+            );
 
         accelYChar =
-            await service.getCharacteristic(ACCEL_Y_UUID);
+            await service.getCharacteristic(
+                ACCEL_Y_UUID
+            );
 
         accelZChar =
-            await service.getCharacteristic(ACCEL_Z_UUID);
+            await service.getCharacteristic(
+                ACCEL_Z_UUID
+            );
 
         gyroXChar =
-            await service.getCharacteristic(GYRO_X_UUID);
+            await service.getCharacteristic(
+                GYRO_X_UUID
+            );
 
         gyroYChar =
-            await service.getCharacteristic(GYRO_Y_UUID);
+            await service.getCharacteristic(
+                GYRO_Y_UUID
+            );
 
         gyroZChar =
-            await service.getCharacteristic(GYRO_Z_UUID);
+            await service.getCharacteristic(
+                GYRO_Z_UUID
+            );
+
+        batteryChar =
+            await service.getCharacteristic(
+                BATTERY_UUID
+            );
 
         ledChar =
-            await service.getCharacteristic(LED_UUID);
-
-        // Notifications
+            await service.getCharacteristic(
+                LED_UUID
+            );
 
         await motionChar.startNotifications();
 
@@ -132,14 +163,12 @@ async function connect() {
         await gyroYChar.startNotifications();
         await gyroZChar.startNotifications();
 
-        // Motion
+        await batteryChar.startNotifications();
 
         motionChar.addEventListener(
             "characteristicvaluechanged",
             handleMotion
         );
-
-        // Accelerometer
 
         accelXChar.addEventListener(
             "characteristicvaluechanged",
@@ -156,8 +185,6 @@ async function connect() {
             e => az.textContent = decode(e)
         );
 
-        // Gyroscope
-
         gyroXChar.addEventListener(
             "characteristicvaluechanged",
             e => gx.textContent = decode(e)
@@ -172,6 +199,25 @@ async function connect() {
             "characteristicvaluechanged",
             e => gz.textContent = decode(e)
         );
+
+        batteryChar.addEventListener(
+
+            "characteristicvaluechanged",
+
+            event => {
+
+                batteryText.textContent =
+                    event.target.value.getUint8(0);
+
+            }
+
+        );
+
+        const value =
+            await batteryChar.readValue();
+
+        batteryText.textContent =
+            value.getUint8(0);
 
         statusText.textContent = "Connected";
         statusText.className = "status connected";
@@ -188,7 +234,7 @@ async function connect() {
 
     }
 
-    catch (error) {
+    catch(error){
 
         console.error(error);
 
@@ -196,35 +242,36 @@ async function connect() {
 
 }
 
-// HELPERS
+function decode(event){
 
-function decode(event) {
-
-    return new TextDecoder().decode(event.target.value);
+    return new TextDecoder().decode(
+        event.target.value
+    );
 
 }
 
-function handleMotion(event) {
+function handleMotion(event){
 
     const value = decode(event);
 
     motionText.textContent = value;
 
-    if (value === "MOVING") {
+    if(value === "MOVING"){
 
-        motionText.className = "motion moving";
+        motionText.className =
+            "motion moving";
 
     }
 
-    else {
+    else{
 
-        motionText.className = "motion stationary";
+        motionText.className =
+            "motion stationary";
 
     }
 
 }
-
-// LED
+//================ LED =================//
 
 async function toggleLED() {
 
@@ -268,7 +315,8 @@ async function toggleLED() {
 
 }
 
-// LAST SEEN
+
+//================ LAST SEEN =================//
 
 async function writeLastSeen() {
 
@@ -280,7 +328,7 @@ async function writeLastSeen() {
 
         lng: 3.3792,
 
-        battery: 87,
+        battery: Number(batteryText.textContent),
 
         time: new Date().toISOString()
 
@@ -308,6 +356,7 @@ async function writeLastSeen() {
 
 }
 
+
 async function readLastSeen() {
 
     if (!lastSeenChar) return;
@@ -333,18 +382,19 @@ async function readLastSeen() {
     }
 
 }
-
-// DISCONNECT
+//================ DISCONNECT =================//
 
 function onDisconnected() {
 
     console.log("Disconnected");
 
     statusText.textContent = "Disconnected";
-
     statusText.className = "status";
 
     motionText.textContent = "--";
+    motionText.className = "motion";
+
+    batteryText.textContent = "--";
 
     ax.textContent = "0.00";
     ay.textContent = "0.00";
@@ -364,5 +414,23 @@ function onDisconnected() {
     readLastSeenBtn.disabled = true;
 
     ledOn = false;
+
+    device = null;
+    server = null;
+    service = null;
+
+    motionChar = null;
+    lastSeenChar = null;
+
+    accelXChar = null;
+    accelYChar = null;
+    accelZChar = null;
+
+    gyroXChar = null;
+    gyroYChar = null;
+    gyroZChar = null;
+
+    batteryChar = null;
+    ledChar = null;
 
 }
