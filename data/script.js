@@ -287,7 +287,7 @@ async function toggleLED() {
                 encoder.encode("OFF")
             );
 
-            ledBtn.textContent = "Turn ON LED";
+            ledBtn.textContent = "Turn ON Sound";
 
             ledOn = false;
 
@@ -299,7 +299,7 @@ async function toggleLED() {
                 encoder.encode("ON")
             );
 
-            ledBtn.textContent = "Turn OFF LED";
+            ledBtn.textContent = "Turn OFF Sound";
 
             ledOn = true;
 

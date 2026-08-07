@@ -7,7 +7,7 @@
 #include "storage.h"
 #include "battery.h"
 
-#define LED_PIN 4
+#define BUZZER_PIN 4
 
 //================ UUIDS =================//
 
@@ -26,7 +26,7 @@
 
 #define BATTERY_UUID "55555555-5555-5555-5555-555555555555"
 
-#define LED_UUID "dabed4fd-f792-443f-b186-3da384f9d673"
+#define BUZZER_UUID "dabed4fd-f792-443f-b186-3da384f9d673"
 
 //================ BLE STATE =================//
 
@@ -44,7 +44,7 @@ NimBLECharacteristic *gyroYChar;
 NimBLECharacteristic *gyroZChar;
 
 NimBLECharacteristic *batteryChar;
-NimBLECharacteristic *ledChar;
+NimBLECharacteristic *buzzerChar;
 
 //================ SERVER CALLBACK =================//
 
@@ -69,9 +69,9 @@ class ServerCallbacks : public NimBLEServerCallbacks
     }
 };
 
-//================ LED CALLBACK =================//
+//================ Buzzer CALLBACK =================//
 
-class LedCallbacks : public NimBLECharacteristicCallbacks
+class BuzzerCallbacks : public NimBLECharacteristicCallbacks
 {
     void onWrite(
         NimBLECharacteristic *characteristic,
@@ -80,22 +80,18 @@ class LedCallbacks : public NimBLECharacteristicCallbacks
         std::string value = characteristic->getValue();
 
         if (value == "ON")
-        {
-            digitalWrite(LED_PIN, HIGH);
-
-            characteristic->setValue("ON");
-
-            Serial.println("LED ON");
-        }
-        else if (value == "OFF")
-        {
-            digitalWrite(LED_PIN, LOW);
-
-            characteristic->setValue("OFF");
-
-            Serial.println("LED OFF");
-        }
+    {
+        digitalWrite(BUZZER_PIN, HIGH);
+        characteristic->setValue("ON");
+        Serial.println("Buzzer ON");
     }
+    else if (value == "OFF")
+    {
+        digitalWrite(BUZZER_PIN, LOW);
+        characteristic->setValue("OFF");
+        Serial.println("Buzzer OFF");
+    }
+        }
 };
 
 //================ LAST SEEN CALLBACK =================//
@@ -124,8 +120,8 @@ bool isBLEConnected()
 
 void initBLE()
 {
-    pinMode(LED_PIN, OUTPUT);
-    digitalWrite(LED_PIN, LOW);
+    pinMode(BUZZER_PIN, OUTPUT);
+    digitalWrite(BUZZER_PIN, LOW);
 
     NimBLEDevice::init("Smart Tracker");
 
@@ -214,18 +210,18 @@ void initBLE()
             NIMBLE_PROPERTY::READ |
             NIMBLE_PROPERTY::NOTIFY);
 
-    //================ LED =================//
+    //================BUZZER =================//
 
-    ledChar =
+    buzzerChar =
         service->createCharacteristic(
-            LED_UUID,
+            BUZZER_UUID,
             NIMBLE_PROPERTY::READ |
             NIMBLE_PROPERTY::WRITE);
 
-    ledChar->setCallbacks(
-        new LedCallbacks());
+    buzzerChar->setCallbacks(
+        new BuzzerCallbacks());
 
-    ledChar->setValue("OFF");
+    buzzerChar->setValue("OFF");
 
     //================ START ADVERTISING =================//
 
