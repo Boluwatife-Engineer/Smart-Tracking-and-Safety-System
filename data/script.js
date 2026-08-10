@@ -1,45 +1,120 @@
-//UUIDS 
+// ======================================================
+// UUIDS
+// ======================================================
 
-const SERVICE_UUID = "6f1f9ea6-76b7-4460-918b-5fa33f709630";
+const SERVICE_UUID =
+    "6f1f9ea6-76b7-4460-918b-5fa33f709630";
 
-const MOTION_UUID = "11111111-1111-1111-1111-111111111111";
-const LAST_SEEN_UUID = "44444444-4444-4444-4444-444444444444";
+const MOTION_UUID =
+    "11111111-1111-1111-1111-111111111111";
 
-const ACCEL_X_UUID = "22222222-2222-2222-2222-222222222221";
-const ACCEL_Y_UUID = "22222222-2222-2222-2222-222222222222";
-const ACCEL_Z_UUID = "22222222-2222-2222-2222-222222222223";
+const LAST_SEEN_UUID =
+    "44444444-4444-4444-4444-444444444444";
 
-const GYRO_X_UUID = "33333333-3333-3333-3333-333333333331";
-const GYRO_Y_UUID = "33333333-3333-3333-3333-333333333332";
-const GYRO_Z_UUID = "33333333-3333-3333-3333-333333333333";
+const ACCEL_X_UUID =
+    "22222222-2222-2222-2222-222222222221";
 
-const BATTERY_UUID = "55555555-5555-5555-5555-555555555555";
+const ACCEL_Y_UUID =
+    "22222222-2222-2222-2222-222222222222";
 
-const LED_UUID = "dabed4fd-f792-443f-b186-3da384f9d673";
+const ACCEL_Z_UUID =
+    "22222222-2222-2222-2222-222222222223";
+
+const GYRO_X_UUID =
+    "33333333-3333-3333-3333-333333333331";
+
+const GYRO_Y_UUID =
+    "33333333-3333-3333-3333-333333333332";
+
+const GYRO_Z_UUID =
+    "33333333-3333-3333-3333-333333333333";
+
+const BATTERY_UUID =
+    "55555555-5555-5555-5555-555555555555";
+
+const BUZZER_UUID =
+    "dabed4fd-f792-443f-b186-3da384f9d673";
+
+// GPS
+
+const GPS_LATITUDE_UUID =
+    "66666666-6666-6666-6666-666666666661";
+
+const GPS_LONGITUDE_UUID =
+    "66666666-6666-6666-6666-666666666662";
+
+const GPS_ALTITUDE_UUID =
+    "66666666-6666-6666-6666-666666666663";
+
+const GPS_TIME_UUID =
+    "66666666-6666-6666-6666-666666666664";
+
+const GPS_STATUS_UUID =
+    "66666666-6666-6666-6666-666666666665";
 
 
+// ======================================================
+// DOM
+// ======================================================
+
+const connectBtn =
+    document.getElementById("connectBtn");
+
+const ledBtn =
+    document.getElementById("ledBtn");
+
+const writeLastSeenBtn =
+    document.getElementById("writeLastSeenBtn");
+
+const readLastSeenBtn =
+    document.getElementById("readLastSeenBtn");
+
+const statusText =
+    document.getElementById("status");
+
+const motionText =
+    document.getElementById("motion");
+
+const batteryText =
+    document.getElementById("battery");
+
+const ax =
+    document.getElementById("ax");
+
+const ay =
+    document.getElementById("ay");
+
+const az =
+    document.getElementById("az");
+
+const gx =
+    document.getElementById("gx");
+
+const gy =
+    document.getElementById("gy");
+
+const gz =
+    document.getElementById("gz");
+
+const gpsStatus =
+    document.getElementById("gpsStatus");
+
+const latitude =
+    document.getElementById("latitude");
+
+const longitude =
+    document.getElementById("longitude");
+
+const altitude =
+    document.getElementById("altitude");
+
+const gpsTime =
+    document.getElementById("gpsTime");
 
 
-const connectBtn = document.getElementById("connectBtn");
-const ledBtn = document.getElementById("ledBtn");
-
-const writeLastSeenBtn = document.getElementById("writeLastSeenBtn");
-const readLastSeenBtn = document.getElementById("readLastSeenBtn");
-
-const statusText = document.getElementById("status");
-const motionText = document.getElementById("motion");
-const batteryText = document.getElementById("battery");
-
-const ax = document.getElementById("ax");
-const ay = document.getElementById("ay");
-const az = document.getElementById("az");
-
-const gx = document.getElementById("gx");
-const gy = document.getElementById("gy");
-const gz = document.getElementById("gz");
-
-
-//================ BLE VARIABLES ================//
+// ======================================================
+// BLE VARIABLES
+// ======================================================
 
 let device;
 let server;
@@ -59,59 +134,94 @@ let gyroZChar;
 let batteryChar;
 let ledChar;
 
+let gpsLatitudeChar;
+let gpsLongitudeChar;
+let gpsAltitudeChar;
+let gpsTimeChar;
+let gpsStatusChar;
+
 let ledOn = false;
 
 
-//================ EVENTS ================//
+// ======================================================
+// EVENTS
+// ======================================================
 
-connectBtn.addEventListener("click", connect);
-ledBtn.addEventListener("click", toggleLED);
+connectBtn.addEventListener(
+    "click",
+    connect
+);
 
-writeLastSeenBtn.addEventListener("click", writeLastSeen);
-readLastSeenBtn.addEventListener("click", readLastSeen);
+ledBtn.addEventListener(
+    "click",
+    toggleLED
+);
+
+writeLastSeenBtn.addEventListener(
+    "click",
+    writeLastSeen
+);
+
+readLastSeenBtn.addEventListener(
+    "click",
+    readLastSeen
+);
 
 
-//================ CONNECT ================//
+// ======================================================
+// CONNECT
+// ======================================================
 
-async function connect() {
+async function connect()
+{
+    try
+    {
+        device =
+            await navigator.bluetooth.requestDevice({
 
-    try {
+                filters: [
+                    {
+                        name: "Smart Tracker"
+                    }
+                ],
 
-        device = await navigator.bluetooth.requestDevice({
+                optionalServices: [
+                    SERVICE_UUID
+                ]
 
-            filters: [
-                {
-                    name: "Smart Tracker"
-                }
-            ],
-
-            optionalServices: [
-                SERVICE_UUID
-            ]
-
-        });
+            });
 
         device.addEventListener(
             "gattserverdisconnected",
             onDisconnected
         );
 
-        server = await device.gatt.connect();
+        server =
+            await device.gatt.connect();
 
         service =
             await server.getPrimaryService(
                 SERVICE_UUID
             );
 
+
+        // ================= MOTION =================
+
         motionChar =
             await service.getCharacteristic(
                 MOTION_UUID
             );
 
+
+        // ================= LAST SEEN =================
+
         lastSeenChar =
             await service.getCharacteristic(
                 LAST_SEEN_UUID
             );
+
+
+        // ================= ACCEL =================
 
         accelXChar =
             await service.getCharacteristic(
@@ -128,6 +238,9 @@ async function connect() {
                 ACCEL_Z_UUID
             );
 
+
+        // ================= GYRO =================
+
         gyroXChar =
             await service.getCharacteristic(
                 GYRO_X_UUID
@@ -143,15 +256,54 @@ async function connect() {
                 GYRO_Z_UUID
             );
 
+
+        // ================= BATTERY =================
+
         batteryChar =
             await service.getCharacteristic(
                 BATTERY_UUID
             );
 
+
+        // ================= BUZZER =================
+
         ledChar =
             await service.getCharacteristic(
-                LED_UUID
+                BUZZER_UUID
             );
+
+
+        // ================= GPS =================
+
+        gpsLatitudeChar =
+            await service.getCharacteristic(
+                GPS_LATITUDE_UUID
+            );
+
+        gpsLongitudeChar =
+            await service.getCharacteristic(
+                GPS_LONGITUDE_UUID
+            );
+
+        gpsAltitudeChar =
+            await service.getCharacteristic(
+                GPS_ALTITUDE_UUID
+            );
+
+        gpsTimeChar =
+            await service.getCharacteristic(
+                GPS_TIME_UUID
+            );
+
+        gpsStatusChar =
+            await service.getCharacteristic(
+                GPS_STATUS_UUID
+            );
+
+
+        // ==================================================
+        // NOTIFICATIONS
+        // ==================================================
 
         await motionChar.startNotifications();
 
@@ -165,10 +317,26 @@ async function connect() {
 
         await batteryChar.startNotifications();
 
+        await gpsLatitudeChar.startNotifications();
+        await gpsLongitudeChar.startNotifications();
+        await gpsAltitudeChar.startNotifications();
+        await gpsTimeChar.startNotifications();
+        await gpsStatusChar.startNotifications();
+
+
+        // ==================================================
+        // MOTION
+        // ==================================================
+
         motionChar.addEventListener(
             "characteristicvaluechanged",
             handleMotion
         );
+
+
+        // ==================================================
+        // ACCEL
+        // ==================================================
 
         accelXChar.addEventListener(
             "characteristicvaluechanged",
@@ -185,6 +353,11 @@ async function connect() {
             e => az.textContent = decode(e)
         );
 
+
+        // ==================================================
+        // GYRO
+        // ==================================================
+
         gyroXChar.addEventListener(
             "characteristicvaluechanged",
             e => gx.textContent = decode(e)
@@ -200,201 +373,336 @@ async function connect() {
             e => gz.textContent = decode(e)
         );
 
+
+        // ==================================================
+        // BATTERY
+        // ==================================================
+
         batteryChar.addEventListener(
-
             "characteristicvaluechanged",
-
-            event => {
-
+            event =>
+            {
                 batteryText.textContent =
                     event.target.value.getUint8(0);
-
             }
-
         );
 
-        const value =
+
+        // ==================================================
+        // GPS
+        // ==================================================
+
+        gpsLatitudeChar.addEventListener(
+            "characteristicvaluechanged",
+            event =>
+            {
+                latitude.textContent =
+                    decode(event);
+            }
+        );
+
+
+        gpsLongitudeChar.addEventListener(
+            "characteristicvaluechanged",
+            event =>
+            {
+                longitude.textContent =
+                    decode(event);
+            }
+        );
+
+
+        gpsAltitudeChar.addEventListener(
+            "characteristicvaluechanged",
+            event =>
+            {
+                altitude.textContent =
+                    decode(event);
+            }
+        );
+
+
+        gpsTimeChar.addEventListener(
+            "characteristicvaluechanged",
+            event =>
+            {
+                gpsTime.textContent =
+                    decode(event);
+            }
+        );
+
+
+        gpsStatusChar.addEventListener(
+            "characteristicvaluechanged",
+            event =>
+            {
+                const value =
+                    decode(event);
+
+                gpsStatus.textContent =
+                    value;
+
+                if (value === "FIXED")
+                {
+                    gpsStatus.className =
+                        "gps-fixed";
+                }
+                else
+                {
+                    gpsStatus.className =
+                        "gps-searching";
+                }
+            }
+        );
+
+
+        // ==================================================
+        // INITIAL BATTERY READ
+        // ==================================================
+
+        const batteryValue =
             await batteryChar.readValue();
 
         batteryText.textContent =
-            value.getUint8(0);
+            batteryValue.getUint8(0);
 
-        statusText.textContent = "Connected";
-        statusText.className = "status connected";
+
+        // ==================================================
+        // INITIAL GPS READ
+        // ==================================================
+
+        const gpsStatusValue =
+            await gpsStatusChar.readValue();
+
+        gpsStatus.textContent =
+            decodeValue(gpsStatusValue);
+
+
+        // ==================================================
+        // UI
+        // ==================================================
+
+        statusText.textContent =
+            "Connected";
+
+        statusText.className =
+            "status connected";
 
         connectBtn.disabled = true;
-        connectBtn.textContent = "Connected";
+
+        connectBtn.textContent =
+            "Connected";
 
         ledBtn.disabled = false;
 
         writeLastSeenBtn.disabled = false;
+
         readLastSeenBtn.disabled = false;
 
-        console.log("Connected");
-
+        console.log(
+            "Smart Tracker connected"
+        );
     }
 
-    catch(error){
-
-        console.error(error);
-
+    catch(error)
+    {
+        console.error(
+            "BLE connection error:",
+            error
+        );
     }
-
 }
 
-function decode(event){
 
+// ======================================================
+// DECODE
+// ======================================================
+
+function decode(event)
+{
     return new TextDecoder().decode(
         event.target.value
     );
-
 }
 
-function handleMotion(event){
+function decodeValue(value)
+{
+    return new TextDecoder().decode(
+        value
+    );
+}
 
-    const value = decode(event);
 
-    motionText.textContent = value;
+// ======================================================
+// MOTION
+// ======================================================
 
-    if(value === "MOVING"){
+function handleMotion(event)
+{
+    const value =
+        decode(event);
 
+    motionText.textContent =
+        value;
+
+    if (value === "MOVING")
+    {
         motionText.className =
             "motion moving";
-
     }
-
-    else{
-
+    else
+    {
         motionText.className =
             "motion stationary";
-
     }
-
 }
-//================ LED =================//
 
-async function toggleLED() {
 
-    if (!ledChar) return;
+// ======================================================
+// BUZZER
+// ======================================================
 
-    const encoder = new TextEncoder();
+async function toggleLED()
+{
+    if (!ledChar)
+        return;
 
-    try {
+    const encoder =
+        new TextEncoder();
 
-        if (ledOn) {
-
+    try
+    {
+        if (ledOn)
+        {
             await ledChar.writeValue(
                 encoder.encode("OFF")
             );
 
-            ledBtn.textContent = "Turn ON Sound";
+            ledBtn.textContent =
+                "Turn ON Sound";
 
             ledOn = false;
-
         }
-
-        else {
-
+        else
+        {
             await ledChar.writeValue(
                 encoder.encode("ON")
             );
 
-            ledBtn.textContent = "Turn OFF Sound";
+            ledBtn.textContent =
+                "Turn OFF Sound";
 
             ledOn = true;
-
         }
-
     }
-
-    catch (error) {
-
+    catch(error)
+    {
         console.error(error);
-
     }
-
 }
 
 
-//================ LAST SEEN =================//
+// ======================================================
+// LAST SEEN
+// ======================================================
 
-async function writeLastSeen() {
+async function writeLastSeen()
+{
+    if (!lastSeenChar)
+        return;
 
-    if (!lastSeenChar) return;
+    const lastSeen =
+    {
+        lat: Number(latitude.textContent),
+        lng: Number(longitude.textContent),
 
-    const lastSeen = {
+        battery:
+            Number(
+                batteryText.textContent
+            ),
 
-        lat: 6.5244,
-
-        lng: 3.3792,
-
-        battery: Number(batteryText.textContent),
-
-        time: new Date().toISOString()
-
+        time:
+            new Date().toISOString()
     };
 
-    const json = JSON.stringify(lastSeen);
+    const json =
+        JSON.stringify(lastSeen);
 
-    try {
-
+    try
+    {
         await lastSeenChar.writeValue(
-
             new TextEncoder().encode(json)
-
         );
 
-        console.log("Last Seen Written");
-
+        console.log(
+            "Last Seen Written:",
+            json
+        );
     }
-
-    catch (error) {
-
+    catch(error)
+    {
         console.error(error);
-
     }
-
 }
 
 
-async function readLastSeen() {
+// ======================================================
+// READ LAST SEEN
+// ======================================================
 
-    if (!lastSeenChar) return;
+async function readLastSeen()
+{
+    if (!lastSeenChar)
+        return;
 
-    try {
+    try
+    {
+        const value =
+            await lastSeenChar.readValue();
 
-        const value = await lastSeenChar.readValue();
+        const json =
+            new TextDecoder().decode(
+                value
+            );
 
-        const json = new TextDecoder().decode(value);
-
-        console.log("Last Seen:");
-
-        console.log(json);
+        console.log(
+            "Last Seen:",
+            json
+        );
 
         alert(json);
-
     }
-
-    catch (error) {
-
+    catch(error)
+    {
         console.error(error);
-
     }
-
 }
-//================ DISCONNECT =================//
 
-function onDisconnected() {
 
-    console.log("Disconnected");
+// ======================================================
+// DISCONNECT
+// ======================================================
 
-    statusText.textContent = "Disconnected";
-    statusText.className = "status";
+function onDisconnected()
+{
+    console.log(
+        "Smart Tracker disconnected"
+    );
 
-    motionText.textContent = "--";
-    motionText.className = "motion";
+    statusText.textContent =
+        "Disconnected";
 
-    batteryText.textContent = "--";
+    statusText.className =
+        "status";
+
+    motionText.textContent =
+        "--";
+
+    motionText.className =
+        "motion";
+
+    batteryText.textContent =
+        "--";
 
     ax.textContent = "0.00";
     ay.textContent = "0.00";
@@ -404,13 +712,29 @@ function onDisconnected() {
     gy.textContent = "0.00";
     gz.textContent = "0.00";
 
+    gpsStatus.textContent =
+        "Searching...";
+
+    gpsStatus.className =
+        "gps-searching";
+
+    latitude.textContent = "--";
+    longitude.textContent = "--";
+    altitude.textContent = "--";
+    gpsTime.textContent = "--";
+
     connectBtn.disabled = false;
-    connectBtn.textContent = "Connect Device";
+
+    connectBtn.textContent =
+        "Connect Device";
 
     ledBtn.disabled = true;
-    ledBtn.textContent = "Turn ON LED";
+
+    ledBtn.textContent =
+        "Turn ON Sound";
 
     writeLastSeenBtn.disabled = true;
+
     readLastSeenBtn.disabled = true;
 
     ledOn = false;
@@ -433,4 +757,9 @@ function onDisconnected() {
     batteryChar = null;
     ledChar = null;
 
+    gpsLatitudeChar = null;
+    gpsLongitudeChar = null;
+    gpsAltitudeChar = null;
+    gpsTimeChar = null;
+    gpsStatusChar = null;
 }

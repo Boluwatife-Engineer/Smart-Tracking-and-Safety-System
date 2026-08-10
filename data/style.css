@@ -260,6 +260,85 @@ button:disabled{
 
 }
 
+/* ================= GPS ================= */
+
+.gps-card {
+    margin-top: 20px;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.card-header h2 {
+    margin: 0;
+}
+
+.gps-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.gps-item {
+    padding: 14px;
+    border-radius: 12px;
+    background: #f5f5f5;
+}
+
+.gps-item span {
+    display: block;
+}
+
+.gps-item span:first-child {
+    font-size: 13px;
+    opacity: 0.65;
+    margin-bottom: 6px;
+}
+
+.gps-item strong {
+    font-size: 16px;
+    word-break: break-word;
+}
+
+.gps-searching,
+.gps-fixed {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.gps-searching {
+    background: #b56b17;
+    color: white    ;
+}
+
+.gps-fixed {
+    background: #d4edda;
+    color: #155724;
+}
+
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 600px) {
+
+    .gps-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .card-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
 /* RESPONSIVE */
 
 @media (max-width:700px){

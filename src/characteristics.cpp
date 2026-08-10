@@ -19,6 +19,12 @@ NimBLECharacteristic *gyroZChar;
 NimBLECharacteristic *batteryChar;
 NimBLECharacteristic *buzzerChar;
 
+NimBLECharacteristic *gpsLatitudeChar;
+NimBLECharacteristic *gpsLongitudeChar;
+NimBLECharacteristic *gpsAltitudeChar;
+NimBLECharacteristic *gpsTimeChar;
+NimBLECharacteristic *gpsStatusChar;
+
 void createCharacteristics(NimBLEService *service)
 {
     //================ MOTION =================//
@@ -109,4 +115,45 @@ void createCharacteristics(NimBLEService *service)
         new BuzzerCallbacks());
 
     buzzerChar->setValue("OFF");
+
+    gpsLatitudeChar =
+    service->createCharacteristic(
+        GPS_LATITUDE_UUID,
+        NIMBLE_PROPERTY::READ |
+        NIMBLE_PROPERTY::NOTIFY
+    );
+
+gpsLongitudeChar =
+    service->createCharacteristic(
+        GPS_LONGITUDE_UUID,
+        NIMBLE_PROPERTY::READ |
+        NIMBLE_PROPERTY::NOTIFY
+    );
+
+gpsAltitudeChar =
+    service->createCharacteristic(
+        GPS_ALTITUDE_UUID,
+        NIMBLE_PROPERTY::READ |
+        NIMBLE_PROPERTY::NOTIFY
+    );
+
+gpsTimeChar =
+    service->createCharacteristic(
+        GPS_TIME_UUID,
+        NIMBLE_PROPERTY::READ |
+        NIMBLE_PROPERTY::NOTIFY
+    );
+
+gpsStatusChar =
+    service->createCharacteristic(
+        GPS_STATUS_UUID,
+        NIMBLE_PROPERTY::READ |
+        NIMBLE_PROPERTY::NOTIFY
+    );
+
+gpsLatitudeChar->setValue("--");
+gpsLongitudeChar->setValue("--");
+gpsAltitudeChar->setValue("--");
+gpsTimeChar->setValue("--");
+gpsStatusChar->setValue("SEARCHING");
 }

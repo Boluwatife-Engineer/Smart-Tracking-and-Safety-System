@@ -9,6 +9,7 @@
 #include "mpu6050.h"
 #include "pins.h"
 #include "uuids.h"
+#include "gps.h"
 
 bool deviceConnected = false;
 
@@ -60,7 +61,11 @@ void updateBLE()
         return;
     }
 
+    // ================= MOTION =================
+
     bool moving = isMoving();
+
+    // ================= MPU6050 =================
 
     float ax = getAccelX();
     float ay = getAccelY();
@@ -70,59 +75,121 @@ void updateBLE()
     float gy = getGyroY();
     float gz = getGyroZ();
 
+    // ================= SERIAL =================
+
     Serial.printf(
-        "Accel: %.2f %.2f %.2f | Gyro: %.2f %.2f %.2f | %s | Battery: %d%%\n",
+        "Accel: %.2f %.2f %.2f | "
+        "Gyro: %.2f %.2f %.2f | "
+        "%s | Battery: %d%%\n",
+
         ax,
         ay,
         az,
+
         gx,
         gy,
         gz,
-        moving ? "MOVING" : "STATIONARY",
-        getBatteryLevel());
 
-    // Motion
+        moving
+            ? "MOVING"
+            : "STATIONARY",
+
+        getBatteryLevel()
+    );
+
+    // ================= MOTION =================
 
     motionChar->setValue(
-        moving ? "MOVING" : "STATIONARY");
+        moving
+            ? "MOVING"
+            : "STATIONARY"
+    );
 
     motionChar->notify();
 
-    // Accelerometer
+    // ================= ACCELEROMETER =================
 
-    accelXChar->setValue(
-        String(ax, 2).c_str());
+    String axValue = String(ax, 2);
+    String ayValue = String(ay, 2);
+    String azValue = String(az, 2);
 
-    accelYChar->setValue(
-        String(ay, 2).c_str());
-
-    accelZChar->setValue(
-        String(az, 2).c_str());
+    accelXChar->setValue(axValue.c_str());
+    accelYChar->setValue(ayValue.c_str());
+    accelZChar->setValue(azValue.c_str());
 
     accelXChar->notify();
     accelYChar->notify();
     accelZChar->notify();
 
-    // Gyroscope
+    // ================= GYROSCOPE =================
 
-    gyroXChar->setValue(
-        String(gx, 2).c_str());
+    String gxValue = String(gx, 2);
+    String gyValue = String(gy, 2);
+    String gzValue = String(gz, 2);
 
-    gyroYChar->setValue(
-        String(gy, 2).c_str());
-
-    gyroZChar->setValue(
-        String(gz, 2).c_str());
+    gyroXChar->setValue(gxValue.c_str());
+    gyroYChar->setValue(gyValue.c_str());
+    gyroZChar->setValue(gzValue.c_str());
 
     gyroXChar->notify();
     gyroYChar->notify();
     gyroZChar->notify();
 
-    // Battery
+    // ================= BATTERY =================
 
     uint8_t level = getBatteryLevel();
 
     batteryChar->setValue(&level, 1);
-
     batteryChar->notify();
+
+    // ================= GPS =================
+
+    if (hasGPSFix())
+    {
+        String latitude =
+            String(getLatitude(), 6);
+
+        String longitude =
+            String(getLongitude(), 6);
+
+        String altitude =
+            String(getAltitude(), 1);
+
+        String gpsTime =
+            getGPSTime();
+
+        gpsLatitudeChar->setValue(
+            latitude.c_str()
+        );
+
+        gpsLongitudeChar->setValue(
+            longitude.c_str()
+        );
+
+        gpsAltitudeChar->setValue(
+            altitude.c_str()
+        );
+
+        gpsTimeChar->setValue(
+            gpsTime.c_str()
+        );
+
+        gpsStatusChar->setValue(
+            "FIXED"
+        );
+
+        gpsLatitudeChar->notify();
+        gpsLongitudeChar->notify();
+        gpsAltitudeChar->notify();
+        gpsTimeChar->notify();
+        gpsStatusChar->notify();
+    }
+    else
+    {
+        gpsStatusChar->setValue(
+            "SEARCHING"
+        );
+
+        gpsStatusChar->notify();
+    }
 }

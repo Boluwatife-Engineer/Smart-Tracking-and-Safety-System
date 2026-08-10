@@ -17,6 +17,12 @@ extern NimBLECharacteristic *gyroZChar;
 extern NimBLECharacteristic *batteryChar;
 extern NimBLECharacteristic *buzzerChar;
 
+extern NimBLECharacteristic *gpsLatitudeChar;
+extern NimBLECharacteristic *gpsLongitudeChar;
+extern NimBLECharacteristic *gpsAltitudeChar;
+extern NimBLECharacteristic *gpsTimeChar;
+extern NimBLECharacteristic *gpsStatusChar;
+
 void createCharacteristics(NimBLEService *service);
 
 #endif
