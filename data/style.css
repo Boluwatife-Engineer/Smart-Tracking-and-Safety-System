@@ -1,381 +1,582 @@
 @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap');
 
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:"Lexend",sans-serif;
-}
 
-body{
+/* ======================================================
+   RESET
+====================================================== */
 
-    background:#f4f7fb;
+* {
 
-    color:#111827;
+    margin: 0;
 
-    display:flex;
+    padding: 0;
 
-    justify-content:center;
+    box-sizing: border-box;
 
-    padding:40px 20px;
+    font-family: "Lexend", sans-serif;
 
 }
 
-.container{
 
-    width:100%;
+/* ======================================================
+   BODY
+====================================================== */
 
-    max-width:720px;
+body {
 
-}
+    background: #f4f7fb;
 
-h1{
+    color: #111827;
 
-    text-align:center;
+    display: flex;
 
-    font-size:38px;
+    justify-content: center;
 
-    margin-bottom:30px;
-
-    font-weight:700;
-
-}
-
-button{
-
-    width:100%;
-
-    border:none;
-
-    border-radius:14px;
-
-    padding:16px;
-
-    font-size:17px;
-
-    cursor:pointer;
-
-    transition:.25s;
+    padding: 40px 20px;
 
 }
 
-button:disabled{
 
-    opacity:.6;
+/* ======================================================
+   CONTAINER
+====================================================== */
 
-    cursor:not-allowed;
+.container {
 
-}
+    width: 100%;
 
-/* CONNECT */
-
-#connectBtn{
-
-    background:#2563eb;
-
-    color:white;
-
-    margin-bottom:25px;
+    max-width: 720px;
 
 }
 
-#connectBtn:hover{
 
-    background:#1d4ed8;
+/* ======================================================
+   TITLE
+====================================================== */
 
-}
+h1 {
 
-/* LED */
+    text-align: center;
 
-#ledBtn{
+    font-size: 38px;
 
-    background:#16a34a;
+    margin-bottom: 30px;
 
-    color:white;
-
-    margin-top:25px;
-
-}
-
-#ledBtn:hover{
-
-    background:#15803d;
+    font-weight: 700;
 
 }
 
-/* LAST SEEN */
 
-.button-group{
+/* ======================================================
+   BUTTONS
+====================================================== */
 
-    display:flex;
+button {
 
-    gap:15px;
+    width: 100%;
 
-    margin-top:20px;
+    border: none;
 
-}
+    border-radius: 14px;
 
-.btnn{
+    padding: 16px;
 
-    background:#2563eb;
+    font-size: 17px;
 
-    color:white;
+    cursor: pointer;
 
-}
-
-.btnn:hover{
-
-    background:#1d4ed8;
+    transition: 0.25s;
 
 }
 
-/* CARDS */
 
-.card{
+button:disabled {
 
-    background:white;
+    opacity: 0.6;
 
-    border-radius:18px;
+    cursor: not-allowed;
 
-    padding:25px;
+}
 
-    margin-bottom:20px;
+
+/* ======================================================
+   CONNECT BUTTON
+====================================================== */
+
+#connectBtn {
+
+    background: #2563eb;
+
+    color: white;
+
+    margin-bottom: 25px;
+
+}
+
+
+#connectBtn:hover {
+
+    background: #1d4ed8;
+
+}
+
+
+/* ======================================================
+   BUZZER
+====================================================== */
+
+#ledBtn {
+
+    background: #16a34a;
+
+    color: white;
+
+    margin-top: 25px;
+
+}
+
+
+#ledBtn:hover {
+
+    background: #15803d;
+
+}
+
+
+/* ======================================================
+   LAST SEEN BUTTONS
+====================================================== */
+
+.button-group {
+
+    display: flex;
+
+    gap: 15px;
+
+    margin-top: 20px;
+
+}
+
+
+.btnn {
+
+    background: #2563eb;
+
+    color: white;
+
+}
+
+
+.btnn:hover {
+
+    background: #1d4ed8;
+
+}
+
+
+/* ======================================================
+   CARDS
+====================================================== */
+
+.card {
+
+    background: white;
+
+    border-radius: 18px;
+
+    padding: 25px;
+
+    margin-bottom: 20px;
 
     box-shadow:
-        0 10px 25px rgba(0,0,0,.08);
+        0 10px 25px rgba(0, 0, 0, 0.08);
 
 }
 
-.card h2{
 
-    margin-bottom:20px;
+.card h2 {
 
-    font-size:22px;
+    margin-bottom: 20px;
 
-    color:#1f2937;
+    font-size: 22px;
 
-}
-
-/* STATUS */
-
-.status{
-
-    text-align:center;
-
-    font-size:26px;
-
-    font-weight:bold;
-
-    color:#ef4444;
+    color: #1f2937;
 
 }
 
-.connected{
 
-    color:#22c55e;
+/* ======================================================
+   STATUS
+====================================================== */
 
-}
+.status {
 
-/* BATTERY */
+    text-align: center;
 
-.battery{
+    font-size: 26px;
 
-    text-align:center;
+    font-weight: bold;
 
-    font-size:34px;
-
-    font-weight:bold;
-
-    color:#22c55e;
+    color: #ef4444;
 
 }
 
-/* MOTION */
 
-.motion{
+.connected {
 
-    text-align:center;
-
-    font-size:34px;
-
-    font-weight:bold;
-
-    color:#f59e0b;
+    color: #22c55e;
 
 }
 
-.moving{
 
-    color:#f97316;
+/* ======================================================
+   BATTERY
+====================================================== */
 
-}
+.battery {
 
-.stationary{
+    text-align: center;
 
-    color:#22c55e;
+    font-size: 34px;
 
-}
+    font-weight: bold;
 
-/* SENSOR GRID */
-
-.grid{
-
-    display:grid;
-
-    grid-template-columns:repeat(3,1fr);
-
-    gap:16px;
+    color: #22c55e;
 
 }
 
-.grid div{
 
-    background:#f3f4f6;
+/* ======================================================
+   MOTION
+====================================================== */
 
-    border-radius:14px;
+.motion {
 
-    padding:20px;
+    text-align: center;
 
-    text-align:center;
+    font-size: 34px;
 
-}
+    font-weight: bold;
 
-.grid span{
-
-    display:block;
-
-    color:#6b7280;
-
-    margin-bottom:10px;
-
-    font-size:15px;
+    color: #f59e0b;
 
 }
 
-.grid h3{
 
-    font-size:28px;
+.moving {
 
-    color:#111827;
+    color: #f97316;
 
 }
 
-/* ================= GPS ================= */
+
+.stationary {
+
+    color: #22c55e;
+
+}
+
+
+/* ======================================================
+   SENSOR GRID
+====================================================== */
+
+.grid {
+
+    display: grid;
+
+    grid-template-columns: repeat(3, 1fr);
+
+    gap: 16px;
+
+}
+
+
+.grid div {
+
+    background: #f3f4f6;
+
+    border-radius: 14px;
+
+    padding: 20px;
+
+    text-align: center;
+
+}
+
+
+.grid span {
+
+    display: block;
+
+    color: #6b7280;
+
+    margin-bottom: 10px;
+
+    font-size: 15px;
+
+}
+
+
+.grid h3 {
+
+    font-size: 28px;
+
+    color: #111827;
+
+}
+
+
+/* ======================================================
+   GPS
+====================================================== */
 
 .gps-card {
+
     margin-top: 20px;
+
 }
+
 
 .card-header {
+
     display: flex;
+
     align-items: center;
+
     justify-content: space-between;
+
     gap: 12px;
+
 }
+
 
 .card-header h2 {
+
     margin: 0;
+
 }
+
 
 .gps-grid {
+
     display: grid;
+
     grid-template-columns: repeat(2, 1fr);
+
     gap: 12px;
+
     margin-top: 18px;
+
 }
+
 
 .gps-item {
+
     padding: 14px;
+
     border-radius: 12px;
+
     background: #f5f5f5;
+
 }
+
 
 .gps-item span {
+
     display: block;
+
 }
+
 
 .gps-item span:first-child {
+
     font-size: 13px;
+
     opacity: 0.65;
+
     margin-bottom: 6px;
+
 }
 
+
 .gps-item strong {
+
     font-size: 16px;
+
     word-break: break-word;
+
 }
+
+
+/* ======================================================
+   GPS STATUS
+====================================================== */
 
 .gps-searching,
 .gps-fixed {
+
     display: inline-block;
+
     padding: 5px 10px;
+
     border-radius: 20px;
+
     font-size: 12px;
+
     font-weight: 600;
+
 }
+
 
 .gps-searching {
+
     background: #b56b17;
-    color: white    ;
+
+    color: white;
+
 }
+
 
 .gps-fixed {
+
     background: #d4edda;
+
     color: #155724;
+
 }
 
 
-/* ================= RESPONSIVE ================= */
+/* ======================================================
+   MAP
+====================================================== */
+
+#map {
+
+    width: 100%;
+
+    height: 400px;
+
+    border-radius: 12px;
+
+    margin-top: 15px;
+
+    overflow: hidden;
+
+}
+
+
+/* ======================================================
+   COORDINATES
+====================================================== */
+
+.coordinates {
+
+    margin-top: 15px;
+
+    padding: 12px;
+
+    background: #f5f5f5;
+
+    border-radius: 12px;
+
+}
+
+
+.coordinates p {
+
+    margin-bottom: 6px;
+
+    font-size: 14px;
+
+}
+
+
+.coordinates p:last-child {
+
+    margin-bottom: 0;
+
+}
+
+
+.coordinates span {
+
+    font-weight: 600;
+
+}
+
+
+/* ======================================================
+   RESPONSIVE
+====================================================== */
+
+@media (max-width: 700px) {
+
+    body {
+
+        padding: 20px;
+
+    }
+
+
+    h1 {
+
+        font-size: 30px;
+
+    }
+
+
+    .grid {
+
+        grid-template-columns: 1fr;
+
+    }
+
+
+    .button-group {
+
+        flex-direction: column;
+
+    }
+
+
+    .battery {
+
+        font-size: 28px;
+
+    }
+
+
+    .motion {
+
+        font-size: 28px;
+
+    }
+
+}
+
 
 @media (max-width: 600px) {
 
     .gps-grid {
+
         grid-template-columns: 1fr;
+
     }
+
 
     .card-header {
+
         align-items: flex-start;
+
         flex-direction: column;
-    }
-}
-
-/* RESPONSIVE */
-
-@media (max-width:700px){
-
-    body{
-
-        padding:20px;
 
     }
 
-    h1{
 
-        font-size:30px;
+    #map {
 
-    }
-
-    .grid{
-
-        grid-template-columns:1fr;
-
-    }
-
-    .button-group{
-
-        flex-direction:column;
-
-    }
-
-    .battery{
-
-        font-size:28px;
-
-    }
-
-    .motion{
-
-        font-size:28px;
+        height: 350px;
 
     }
 

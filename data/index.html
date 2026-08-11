@@ -7,237 +7,331 @@
 
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1.0">
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>My Tracker Dashboard</title>
 
+    <!-- Leaflet -->
     <link
         rel="stylesheet"
-        href="style.css">
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+    <!-- Your CSS -->
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
 
 </head>
 
 <body>
 
-    <div class="container">
+<div class="container">
 
-        <h1>My Tracker</h1>
+    <h1>My Tracker</h1>
 
-        <button id="connectBtn">
-            Connect Device
-        </button>
+    <!-- CONNECT -->
 
-        <!-- STATUS -->
+    <button id="connectBtn">
+        Connect Device
+    </button>
 
-        <div class="card">
 
-            <h2>Status</h2>
+    <!-- STATUS -->
 
-            <p
-                id="status"
-                class="status">
+    <div class="card">
 
-                Disconnected
+        <h2>Status</h2>
 
-            </p>
+        <p
+            id="status"
+            class="status"
+        >
+            Disconnected
+        </p>
 
-        </div>
-
-        <!-- BATTERY -->
-
-        <div class="card">
-
-            <h2>Battery</h2>
-
-            <p class="battery">
-
-                <span id="battery">
-                    -
-                </span>%
-
-            </p>
-
-        </div>
-
-        <!-- MOTION -->
-
-        <div class="card">
-
-            <h2>Motion</h2>
-
-            <p
-                id="motion"
-                class="motion">
-
-                -
-
-            </p>
-
-        </div>
-
-        <!-- ACCEL -->
-
-        <div class="card">
-
-            <h2>Acceleration</h2>
-
-            <div class="grid">
-
-                <div>
-
-                    <span>X</span>
-
-                    <h3 id="ax">
-                        0.00
-                    </h3>
-
-                </div>
-
-                <div>
-
-                    <span>Y</span>
-
-                    <h3 id="ay">
-                        0.00
-                    </h3>
-
-                </div>
-
-                <div>
-
-                    <span>Z</span>
-
-                    <h3 id="az">
-                        0.00
-                    </h3>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <!-- GYRO -->
-
-        <div class="card">
-
-            <h2>Gyroscope</h2>
-
-            <div class="grid">
-
-                <div>
-
-                    <span>X</span>
-
-                    <h3 id="gx">
-                        0.00
-                    </h3>
-
-                </div>
-
-                <div>
-
-                    <span>Y</span>
-
-                    <h3 id="gy">
-                        0.00
-                    </h3>
-
-                </div>
-
-                <div>
-
-                    <span>Z</span>
-
-                    <h3 id="gz">
-                        0.00
-                    </h3>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <!-- LED -->
-
-        <button
-            id="ledBtn"
-            disabled>
-
-            Turn ON Sound
-
-        </button>
-
-        <!-- LAST SEEN -->
-
-        <div class="button-group">
-
-            <button
-                id="writeLastSeenBtn"
-                class="btnn"
-                disabled>
-
-                Write Last Seen
-
-            </button>
-
-            <button
-                id="readLastSeenBtn"
-                class="btnn"
-                disabled>
-
-                Read Last Seen
-
-            </button>
-
-        </div>
-
-        <!-- GPS -->
-
-<div class="card gps-card">
-
-    <div class="card-header">
-        <h2>GPS Location</h2>
-
-        <span
-            id="gpsStatus"
-            class="gps-searching">
-            SEARCHING
-        </span>
     </div>
 
-    <div class="gps-grid">
 
-        <div class="gps-item">
-            <span>Latitude</span>
-            <strong id="latitude">-</strong>
+    <!-- BATTERY -->
+
+    <div class="card">
+
+        <h2>Battery</h2>
+
+        <p class="battery">
+
+            <span id="battery">
+                -
+            </span>%
+
+        </p>
+
+    </div>
+
+
+    <!-- MOTION -->
+
+    <div class="card">
+
+        <h2>Motion</h2>
+
+        <p
+            id="motion"
+            class="motion"
+        >
+            -
+        </p>
+
+    </div>
+
+
+    <!-- ACCELERATION -->
+
+    <div class="card">
+
+        <h2>Acceleration</h2>
+
+        <div class="grid">
+
+            <div>
+
+                <span>X</span>
+
+                <h3 id="ax">
+                    0.00
+                </h3>
+
+            </div>
+
+            <div>
+
+                <span>Y</span>
+
+                <h3 id="ay">
+                    0.00
+                </h3>
+
+            </div>
+
+            <div>
+
+                <span>Z</span>
+
+                <h3 id="az">
+                    0.00
+                </h3>
+
+            </div>
+
         </div>
 
-        <div class="gps-item">
-            <span>Longitude</span>
-            <strong id="longitude">-</strong>
+    </div>
+
+
+    <!-- GYROSCOPE -->
+
+    <div class="card">
+
+        <h2>Gyroscope</h2>
+
+        <div class="grid">
+
+            <div>
+
+                <span>X</span>
+
+                <h3 id="gx">
+                    0.00
+                </h3>
+
+            </div>
+
+            <div>
+
+                <span>Y</span>
+
+                <h3 id="gy">
+                    0.00
+                </h3>
+
+            </div>
+
+            <div>
+
+                <span>Z</span>
+
+                <h3 id="gz">
+                    0.00
+                </h3>
+
+            </div>
+
         </div>
 
-        <div class="gps-item">
-            <span>Altitude</span>
-            <strong>
-                <span id="altitude">-</span> 
-            </strong>
+    </div>
+
+
+    <!-- BUZZER -->
+
+    <button
+        id="ledBtn"
+        disabled
+    >
+        Turn ON Sound
+    </button>
+
+
+    <!-- LAST SEEN -->
+
+    <div class="button-group">
+
+        <button
+            id="writeLastSeenBtn"
+            class="btnn"
+            disabled
+        >
+            Write Last Seen
+        </button>
+
+        <button
+            id="readLastSeenBtn"
+            class="btnn"
+            disabled
+        >
+            Read Last Seen
+        </button>
+
+    </div>
+
+
+    <!-- GPS -->
+
+    <div class="card gps-card">
+
+        <div class="card-header">
+
+            <h2>
+                GPS Location
+            </h2>
+
+            <span
+                id="gpsStatus"
+                class="gps-searching"
+            >
+                SEARCHING
+            </span>
+
         </div>
 
-        <div class="gps-item">
-            <span>GPS Time (UTC +1) </span>
-            <strong id="gpsTime">-</strong>
+
+        <div class="gps-grid">
+
+            <div class="gps-item">
+
+                <span>
+                    Latitude
+                </span>
+
+                <strong id="latitude">
+                    -
+                </strong>
+
+            </div>
+
+
+            <div class="gps-item">
+
+                <span>
+                    Longitude
+                </span>
+
+                <strong id="longitude">
+                    -
+                </strong>
+
+            </div>
+
+
+            <div class="gps-item">
+
+                <span>
+                    Altitude
+                </span>
+
+                <strong>
+                    <span id="altitude">
+                        -
+                    </span>
+                    m
+                </strong>
+
+            </div>
+
+
+            <div class="gps-item">
+
+                <span>
+                    GPS Time (UTC +1)
+                </span>
+
+                <strong id="gpsTime">
+                    -
+                </strong>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- LIVE MAP -->
+
+    <div class="card">
+
+        <h3>
+            Live Location
+        </h3>
+
+        <div id="map"></div>
+
+
+        <div class="coordinates">
+
+            <p>
+                Latitude:
+                <span id="mapLatitude">
+                    -
+                </span>
+            </p>
+
+            <p>
+                Longitude:
+                <span id="mapLongitude">
+                    -
+                </span>
+            </p>
+
         </div>
 
     </div>
 
 </div>
 
-    </div>
 
-    <script src="script.js"></script>
+<!-- Leaflet JS -->
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+></script>
+
+
+<!-- Your JS -->
+
+<script src="script.js"></script>
 
 </body>
 
