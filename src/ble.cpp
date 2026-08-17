@@ -144,6 +144,8 @@ void updateBLE()
 
     // ================= GPS =================
 
+       // ================= GPS =================
+
     if (hasGPSFix())
     {
         String latitude =
@@ -187,9 +189,13 @@ void updateBLE()
     else
     {
         gpsStatusChar->setValue(
-            "SEARCHING"
+            "NO_FIX"
         );
 
         gpsStatusChar->notify();
+
+        Serial.println(
+            "BLE GPS STATUS: NO_FIX"
+        );
     }
 }

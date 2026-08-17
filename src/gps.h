@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 
+extern HardwareSerial sim7600;
+
 void initGPS();
 void updateGPS();
 
