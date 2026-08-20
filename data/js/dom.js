@@ -2,7 +2,6 @@
 // DOM ELEMENTS
 // ======================================================
 
-
 // ======================================================
 // CONNECT
 // ======================================================
@@ -35,11 +34,39 @@ const readLastSeenBtn =
 
 
 // ======================================================
-// STATUS
+// BLE STATUS
 // ======================================================
 
 const statusText =
     document.getElementById("status");
+
+const bleStatus =
+    document.getElementById("bleStatus");
+
+
+// ======================================================
+// FIREBASE STATUS
+// ======================================================
+
+const firebaseGpsStatus =
+    document.getElementById(
+        "firebaseGpsStatus"
+    );
+
+const locationSource =
+    document.getElementById(
+        "locationSource"
+    );
+
+const locationState =
+    document.getElementById(
+        "locationState"
+    );
+
+const statusTimestamp =
+    document.getElementById(
+        "statusTimestamp"
+    );
 
 
 // ======================================================
@@ -87,7 +114,7 @@ const gz =
 
 
 // ======================================================
-// GPS
+// DEVICE GPS
 // ======================================================
 
 const gpsStatus =
@@ -107,14 +134,43 @@ const gpsTime =
 
 
 // ======================================================
-// MAP COORDINATES
+// LAST KNOWN FIREBASE LOCATION
+// ======================================================
+
+const lastLatitude =
+    document.getElementById(
+        "lastLatitude"
+    );
+
+const lastLongitude =
+    document.getElementById(
+        "lastLongitude"
+    );
+
+const lastAltitude =
+    document.getElementById(
+        "lastAltitude"
+    );
+
+const lastLocationTime =
+    document.getElementById(
+        "lastLocationTime"
+    );
+
+
+// ======================================================
+// MAP
 // ======================================================
 
 const mapLatitude =
-    document.getElementById("mapLatitude");
+    document.getElementById(
+        "mapLatitude"
+    );
 
 const mapLongitude =
-    document.getElementById("mapLongitude");
+    document.getElementById(
+        "mapLongitude"
+    );
 
 
 // ======================================================
@@ -130,6 +186,12 @@ export {
     readLastSeenBtn,
 
     statusText,
+    bleStatus,
+
+    firebaseGpsStatus,
+    locationSource,
+    locationState,
+    statusTimestamp,
 
     motionText,
 
@@ -148,6 +210,11 @@ export {
     longitude,
     altitude,
     gpsTime,
+
+    lastLatitude,
+    lastLongitude,
+    lastAltitude,
+    lastLocationTime,
 
     mapLatitude,
     mapLongitude

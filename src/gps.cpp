@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include "sim7600.h"
 
+
 // ======================================================
 // GPS DATA
 // ======================================================
@@ -15,38 +16,83 @@ String gpsDate = "";
 
 bool gpsFix = false;
 
+
 // ======================================================
 // PARSE GPS INFO
 // ======================================================
 
 void parseGPSInfo(String response)
 {
-    int start = response.indexOf("+CGPSINFO:");
+    // ==================================================
+    // FIND +CGPSINFO
+    // ==================================================
+
+    int start =
+        response.indexOf("+CGPSINFO:");
 
     if (start == -1)
     {
         gpsFix = false;
 
-        Serial.println("GPS parser: +CGPSINFO not found.");
+        Serial.println(
+            "GPS parser: +CGPSINFO not found."
+        );
 
         return;
     }
 
-    String data = response.substring(
-        start + strlen("+CGPSINFO:")
-    );
+
+    // ==================================================
+    // GET GPS DATA
+    // ==================================================
+
+    String data =
+        response.substring(
+            start + strlen("+CGPSINFO:")
+        );
+
+
+    // ==================================================
+    // CLEAN MODEM RESPONSE
+    // ==================================================
+
+    data.replace("\r", "");
+    data.replace("\n", "");
+
+    int okIndex =
+        data.indexOf("OK");
+
+    if (okIndex != -1)
+    {
+        data =
+            data.substring(
+                0,
+                okIndex
+            );
+    }
 
     data.trim();
 
-    Serial.print("GPS DATA: [");
+
+    Serial.print(
+        "GPS CLEAN DATA: ["
+    );
+
     Serial.print(data);
-    Serial.println("]");
+
+    Serial.println(
+        "]"
+    );
+
 
     // ==================================================
-    // NO FIX
+    // NO DATA / NO FIX
     // ==================================================
 
-    if (data.startsWith(","))
+    if (
+        data.length() == 0 ||
+        data.startsWith(",")
+    )
     {
         gpsFix = false;
 
@@ -57,8 +103,21 @@ void parseGPSInfo(String response)
         return;
     }
 
+
     // ==================================================
-    // SPLIT FIELDS
+    // SPLIT GPS FIELDS
+    //
+    // +CGPSINFO:
+    //
+    // latitude,
+    // N/S,
+    // longitude,
+    // E/W,
+    // date,
+    // time,
+    // altitude,
+    // ...
+    //
     // ==================================================
 
     String fields[8];
@@ -66,7 +125,12 @@ void parseGPSInfo(String response)
     int fieldIndex = 0;
     int previousIndex = 0;
 
-    for (int i = 0; i <= data.length(); i++)
+
+    for (
+        int i = 0;
+        i <= data.length();
+        i++
+    )
     {
         if (
             data[i] == ',' ||
@@ -80,18 +144,61 @@ void parseGPSInfo(String response)
                         previousIndex,
                         i
                     );
+
+                fields[fieldIndex].trim();
             }
 
             fieldIndex++;
-            previousIndex = i + 1;
+
+            previousIndex =
+                i + 1;
         }
     }
 
-    Serial.print("GPS fields: ");
-    Serial.println(fieldIndex);
+
+    Serial.print(
+        "GPS fields: "
+    );
+
+    Serial.println(
+        fieldIndex
+    );
+
 
     // ==================================================
-    // CHECK LATITUDE
+    // DEBUG FIELDS
+    // ==================================================
+
+    for (
+        int i = 0;
+        i < 8;
+        i++
+    )
+    {
+        Serial.print(
+            "Field["
+        );
+
+        Serial.print(
+            i
+        );
+
+        Serial.print(
+            "] = ["
+        );
+
+        Serial.print(
+            fields[i]
+        );
+
+        Serial.println(
+            "]"
+        );
+    }
+
+
+    // ==================================================
+    // VALIDATE LATITUDE
     // ==================================================
 
     if (
@@ -108,8 +215,9 @@ void parseGPSInfo(String response)
         return;
     }
 
+
     // ==================================================
-    // CHECK LONGITUDE
+    // VALIDATE LONGITUDE
     // ==================================================
 
     if (
@@ -126,8 +234,16 @@ void parseGPSInfo(String response)
         return;
     }
 
+
     // ==================================================
-    // RAW COORDINATES
+    // RAW GPS COORDINATES
+    //
+    // Latitude:
+    // DDMM.MMMMM
+    //
+    // Longitude:
+    // DDDMM.MMMMM
+    //
     // ==================================================
 
     float rawLat =
@@ -136,84 +252,187 @@ void parseGPSInfo(String response)
     float rawLon =
         fields[2].toFloat();
 
+
     // ==================================================
-    // LATITUDE DDMM.MMMMM -> DECIMAL DEGREES
+    // CONVERT LATITUDE
+    // DDMM.MMMMM
+    // TO DECIMAL DEGREES
     // ==================================================
 
     int latDegrees =
-        (int)(rawLat / 100);
+        (int)(
+            rawLat / 100.0
+        );
 
     float latMinutes =
         rawLat -
-        (latDegrees * 100);
+        (
+            latDegrees *
+            100.0
+        );
 
     latitude =
         latDegrees +
-        (latMinutes / 60.0);
+        (
+            latMinutes /
+            60.0
+        );
+
 
     // ==================================================
-    // LONGITUDE DDDMM.MMMMM -> DECIMAL DEGREES
+    // CONVERT LONGITUDE
+    // DDDMM.MMMMM
+    // TO DECIMAL DEGREES
     // ==================================================
 
     int lonDegrees =
-        (int)(rawLon / 100);
+        (int)(
+            rawLon / 100.0
+        );
 
     float lonMinutes =
         rawLon -
-        (lonDegrees * 100);
+        (
+            lonDegrees *
+            100.0
+        );
 
     longitude =
         lonDegrees +
-        (lonMinutes / 60.0);
+        (
+            lonMinutes /
+            60.0
+        );
+
 
     // ==================================================
     // SOUTH / WEST
     // ==================================================
 
-    if (fields[1] == "S")
+    if (
+        fields[1] == "S"
+    )
     {
-        latitude = -latitude;
+        latitude =
+            -latitude;
     }
 
-    if (fields[3] == "W")
+    if (
+        fields[3] == "W"
+    )
     {
-        longitude = -longitude;
+        longitude =
+            -longitude;
     }
+
 
     // ==================================================
     // DATE
     // ==================================================
 
-    if (fields[4].length() > 0)
+    if (
+        fields[4].length() > 0
+    )
     {
-        gpsDate = fields[4];
+        gpsDate =
+            fields[4];
     }
+
 
     // ==================================================
     // TIME
     // ==================================================
 
-    if (fields[5].length() > 0)
+    if (
+        fields[5].length() > 0
+    )
     {
-        gpsTime = fields[5];
+        gpsTime =
+            fields[5];
     }
+
 
     // ==================================================
     // ALTITUDE
     // ==================================================
 
-    if (fields[6].length() > 0)
+    if (
+        fields[6].length() > 0
+    )
     {
         altitude =
             fields[6].toFloat();
     }
 
+
+    // ==================================================
+    // GPS FIX CONFIRMED
+    // ==================================================
+
     gpsFix = true;
 
+
+    Serial.println();
     Serial.println(
-        "GPS parser: FIX FOUND."
+        "******** GPS FIX FOUND ********"
+    );
+
+    Serial.print(
+        "Latitude: "
+    );
+
+    Serial.println(
+        latitude,
+        6
+    );
+
+    Serial.print(
+        "Longitude: "
+    );
+
+    Serial.println(
+        longitude,
+        6
+    );
+
+    Serial.print(
+        "Altitude: "
+    );
+
+    Serial.print(
+        altitude,
+        1
+    );
+
+    Serial.println(
+        " m"
+    );
+
+    Serial.print(
+        "Date: "
+    );
+
+    Serial.println(
+        gpsDate
+    );
+
+    Serial.print(
+        "Time: "
+    );
+
+    Serial.println(
+        gpsTime
+    );
+
+    Serial.println(
+        "GPS STATUS: FIXED"
+    );
+
+    Serial.println(
+        "********************************"
     );
 }
+
 
 // ======================================================
 // INITIALIZE GPS
@@ -226,10 +445,56 @@ void initGPS()
         "========== GPS INITIALIZATION =========="
     );
 
+
+    // ==================================================
+    // CHECK GPS STATE
+    // ==================================================
+
+    Serial.println(
+        "Checking GPS state..."
+    );
+
     sendSIM7600Command(
         "AT+CGPS?",
         1000
     );
+
+
+    // ==================================================
+    // TURN GPS ON
+    // ==================================================
+
+    Serial.println(
+        "Turning GPS ON..."
+    );
+
+    sendSIM7600Command(
+        "AT+CGPS=1",
+        2000
+    );
+
+
+    // ==================================================
+    // VERIFY GPS STATE
+    // ==================================================
+
+    Serial.println(
+        "Verifying GPS state..."
+    );
+
+    sendSIM7600Command(
+        "AT+CGPS?",
+        1000
+    );
+
+
+    // ==================================================
+    // INITIAL STATE
+    // ==================================================
+
+    gpsFix = false;
+
+    Serial.println();
 
     Serial.println(
         "GPS initialization complete."
@@ -238,7 +503,10 @@ void initGPS()
     Serial.println(
         "Waiting for satellite fix..."
     );
+
+    Serial.println();
 }
+
 
 // ======================================================
 // UPDATE GPS
@@ -250,37 +518,55 @@ void updateGPS()
     // CLEAR OLD UART DATA
     // ==================================================
 
-    while (sim7600.available())
+    while (
+        sim7600.available()
+    )
     {
         sim7600.read();
     }
 
+
     // ==================================================
-    // REQUEST GPS DATA
+    // REQUEST GPS INFORMATION
     // ==================================================
+
+    Serial.println();
+    Serial.println(
+        "Requesting GPS information..."
+    );
 
     sim7600.println(
         "AT+CGPSINFO"
     );
+
+
+    // ==================================================
+    // READ RESPONSE
+    // ==================================================
 
     String response = "";
 
     unsigned long start =
         millis();
 
+
     while (
-        millis() - start < 1500
+        millis() - start < 2000
     )
     {
-        while (sim7600.available())
+        while (
+            sim7600.available()
+        )
         {
             response +=
-                (char)sim7600.read();
+                (char)
+                sim7600.read();
         }
     }
 
+
     // ==================================================
-    // DEBUG RAW MODEM RESPONSE
+    // RAW MODEM RESPONSE
     // ==================================================
 
     Serial.println();
@@ -288,24 +574,33 @@ void updateGPS()
         "========== GPS RAW RESPONSE =========="
     );
 
-    Serial.print(response);
+    Serial.print(
+        response
+    );
 
     Serial.println();
+
     Serial.println(
         "======================================="
     );
 
+
     // ==================================================
-    // PARSE
+    // PARSE RESPONSE
     // ==================================================
 
-    parseGPSInfo(response);
+    parseGPSInfo(
+        response
+    );
+
 
     // ==================================================
     // DISPLAY RESULT
     // ==================================================
 
-    if (gpsFix)
+    if (
+        gpsFix
+    )
     {
         Serial.println();
         Serial.println(
@@ -369,11 +664,13 @@ void updateGPS()
     }
     else
     {
+        Serial.println();
         Serial.println(
             "GPS STATUS: SEARCHING..."
         );
     }
 }
+
 
 // ======================================================
 // GETTERS
@@ -384,25 +681,30 @@ bool hasGPSFix()
     return gpsFix;
 }
 
+
 float getLatitude()
 {
     return latitude;
 }
+
 
 float getLongitude()
 {
     return longitude;
 }
 
+
 float getAltitude()
 {
     return altitude;
 }
 
+
 String getGPSTime()
 {
     return gpsTime;
 }
+
 
 String getGPSDate()
 {

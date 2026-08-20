@@ -24,24 +24,30 @@
 
 </head>
 
+
 <body>
 
 <div class="container">
 
     <h1>My Tracker</h1>
 
-    <!-- CONNECT -->
+
+    <!-- ==================================================
+         CONNECT
+    =================================================== -->
 
     <button id="connectBtn">
         Connect Device
     </button>
 
 
-    <!-- STATUS -->
+    <!-- ==================================================
+         CONNECTION STATUS
+    =================================================== -->
 
     <div class="card">
 
-        <h2>Status</h2>
+        <h2>Connection Status</h2>
 
         <p
             id="status"
@@ -53,7 +59,68 @@
     </div>
 
 
-    <!-- BATTERY -->
+    <!-- ==================================================
+         SYSTEM STATUS
+    =================================================== -->
+
+    <div class="card">
+
+        <h2>System Status</h2>
+
+        <div class="system-status">
+
+            <p>
+                <strong>BLE:</strong>
+
+                <span id="bleStatus">
+                    Disconnected
+                </span>
+            </p>
+
+
+            <p>
+                <strong>GPS:</strong>
+
+                <span id="firebaseGpsStatus">
+                    UNKNOWN
+                </span>
+            </p>
+
+
+            <p>
+                <strong>Location Source:</strong>
+
+                <span id="locationSource">
+                    -
+                </span>
+            </p>
+
+
+            <p>
+                <strong>Location State:</strong>
+
+                <span id="locationState">
+                    -
+                </span>
+            </p>
+
+
+            <p>
+                <strong>Last Status Update:</strong>
+
+                <span id="statusTimestamp">
+                    -
+                </span>
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- ==================================================
+         BATTERY
+    =================================================== -->
 
     <div class="card">
 
@@ -70,7 +137,9 @@
     </div>
 
 
-    <!-- MOTION -->
+    <!-- ==================================================
+         MOTION
+    =================================================== -->
 
     <div class="card">
 
@@ -86,7 +155,9 @@
     </div>
 
 
-    <!-- ACCELERATION -->
+    <!-- ==================================================
+         ACCELERATION
+    =================================================== -->
 
     <div class="card">
 
@@ -104,6 +175,7 @@
 
             </div>
 
+
             <div>
 
                 <span>Y</span>
@@ -113,6 +185,7 @@
                 </h3>
 
             </div>
+
 
             <div>
 
@@ -129,7 +202,9 @@
     </div>
 
 
-    <!-- GYROSCOPE -->
+    <!-- ==================================================
+         GYROSCOPE
+    =================================================== -->
 
     <div class="card">
 
@@ -147,6 +222,7 @@
 
             </div>
 
+
             <div>
 
                 <span>Y</span>
@@ -156,6 +232,7 @@
                 </h3>
 
             </div>
+
 
             <div>
 
@@ -172,7 +249,9 @@
     </div>
 
 
-    <!-- BUZZER -->
+    <!-- ==================================================
+         BUZZER
+    =================================================== -->
 
     <button
         id="ledBtn"
@@ -182,7 +261,9 @@
     </button>
 
 
-    <!-- LAST SEEN -->
+    <!-- ==================================================
+         LAST SEEN BUTTONS
+    =================================================== -->
 
     <div class="button-group">
 
@@ -193,6 +274,7 @@
         >
             Write Last Seen
         </button>
+
 
         <button
             id="readLastSeenBtn"
@@ -205,15 +287,18 @@
     </div>
 
 
-    <!-- GPS -->
+    <!-- ==================================================
+         DEVICE GPS
+    =================================================== -->
 
     <div class="card gps-card">
 
         <div class="card-header">
 
             <h2>
-                GPS Location
+                Device GPS
             </h2>
+
 
             <span
                 id="gpsStatus"
@@ -259,10 +344,8 @@
                     Altitude
                 </span>
 
-                <strong>
-                    <span id="altitude">
-                        -
-                    </span>
+                <strong id="altitude">
+                    -
                 </strong>
 
             </div>
@@ -271,7 +354,7 @@
             <div class="gps-item">
 
                 <span>
-                    GPS Time (UTC +1)
+                    GPS Time
                 </span>
 
                 <strong id="gpsTime">
@@ -285,7 +368,78 @@
     </div>
 
 
-    <!-- LIVE MAP -->
+    <!-- ==================================================
+         LAST KNOWN FIREBASE LOCATION
+    =================================================== -->
+
+    <div class="card">
+
+        <h2>
+            Last Known Location
+        </h2>
+
+
+        <div class="gps-grid">
+
+            <div class="gps-item">
+
+                <span>
+                    Latitude
+                </span>
+
+                <strong id="lastLatitude">
+                    -
+                </strong>
+
+            </div>
+
+
+            <div class="gps-item">
+
+                <span>
+                    Longitude
+                </span>
+
+                <strong id="lastLongitude">
+                    -
+                </strong>
+
+            </div>
+
+
+            <div class="gps-item">
+
+                <span>
+                    Altitude
+                </span>
+
+                <strong id="lastAltitude">
+                    -
+                </strong>
+
+            </div>
+
+
+            <div class="gps-item">
+
+                <span>
+                    Location Time
+                </span>
+
+                <strong id="lastLocationTime">
+                    -
+                </strong>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ==================================================
+         LIVE MAP
+    =================================================== -->
 
     <div class="card">
 
@@ -293,23 +447,31 @@
             Live Location
         </h3>
 
+
         <div id="map"></div>
 
 
         <div class="coordinates">
 
             <p>
+
                 Latitude:
+
                 <span id="mapLatitude">
                     -
                 </span>
+
             </p>
 
+
             <p>
+
                 Longitude:
+
                 <span id="mapLongitude">
                     -
                 </span>
+
             </p>
 
         </div>
@@ -319,19 +481,24 @@
 </div>
 
 
-<!-- Leaflet JS -->
+<!-- ======================================================
+     LEAFLET JS
+======================================================= -->
 
 <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
 ></script>
 
 
-<!-- Your JS -->
+<!-- ======================================================
+     MAIN JS
+======================================================= -->
 
 <script
     type="module"
-    src="./js/main.js">
-</script>
+    src="./js/main.js"
+></script>
+
 
 </body>
 

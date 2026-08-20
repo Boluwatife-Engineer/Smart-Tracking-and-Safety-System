@@ -101,7 +101,6 @@ async function connect()
             "Requesting Smart Tracker..."
         );
 
-
         device =
             await navigator.bluetooth.requestDevice(
             {
@@ -118,15 +117,12 @@ async function connect()
                 ]
             });
 
-
         console.log(
             "Device selected:",
             device.name
         );
 
-
         setupDisconnectListener();
-
 
         await connectToDevice();
     }
@@ -149,11 +145,6 @@ async function autoConnect()
 {
     try
     {
-        console.log(
-            "Checking for previously authorized devices..."
-        );
-
-
         if (
             !navigator.bluetooth ||
             !navigator.bluetooth.getDevices
@@ -166,23 +157,14 @@ async function autoConnect()
             return;
         }
 
-
         const devices =
             await navigator.bluetooth.getDevices();
-
-
-        console.log(
-            "Authorized Bluetooth devices:",
-            devices
-        );
-
 
         const tracker =
             devices.find(
                 device =>
                     device.name === "Smart Tracker"
             );
-
 
         if (!tracker)
         {
@@ -193,18 +175,10 @@ async function autoConnect()
             return;
         }
 
-
-        console.log(
-            "Previously authorized Smart Tracker found."
-        );
-
-
         device =
             tracker;
 
-
         setupDisconnectListener();
-
 
         await connectToDevice();
     }
@@ -220,7 +194,7 @@ async function autoConnect()
 
 
 // ======================================================
-// DISCONNECT EVENT LISTENER
+// DISCONNECT EVENT
 // ======================================================
 
 function setupDisconnectListener()
@@ -230,12 +204,10 @@ function setupDisconnectListener()
         return;
     }
 
-
     device.removeEventListener(
         "gattserverdisconnected",
         onDisconnected
     );
-
 
     device.addEventListener(
         "gattserverdisconnected",
@@ -245,44 +217,30 @@ function setupDisconnectListener()
 
 
 // ======================================================
-// CONNECT TO GATT DEVICE
+// CONNECT TO DEVICE
 // ======================================================
 
 async function connectToDevice()
 {
     if (!device)
     {
-        console.error(
-            "No Bluetooth device available."
-        );
-
         return;
     }
-
 
     console.log(
         "Connecting to GATT server..."
     );
 
-
-    // ==================================================
-    // CONNECT GATT
-    // ==================================================
-
-    if (
-        !device.gatt.connected
-    )
+    if (!device.gatt.connected)
     {
         server =
             await device.gatt.connect();
     }
-
     else
     {
         server =
             device.gatt;
     }
-
 
     console.log(
         "GATT connected."
@@ -290,7 +248,7 @@ async function connectToDevice()
 
 
     // ==================================================
-    // GET SERVICE
+    // SERVICE
     // ==================================================
 
     service =
@@ -299,13 +257,8 @@ async function connectToDevice()
         );
 
 
-    console.log(
-        "Smart Tracker service found."
-    );
-
-
     // ==================================================
-    // MOTION
+    // CHARACTERISTICS
     // ==================================================
 
     motionChar =
@@ -313,20 +266,11 @@ async function connectToDevice()
             MOTION_UUID
         );
 
-
-    // ==================================================
-    // LAST SEEN
-    // ==================================================
-
     lastSeenChar =
         await service.getCharacteristic(
             LAST_SEEN_UUID
         );
 
-
-    // ==================================================
-    // ACCELEROMETER
-    // ==================================================
 
     accelXChar =
         await service.getCharacteristic(
@@ -344,10 +288,6 @@ async function connectToDevice()
         );
 
 
-    // ==================================================
-    // GYROSCOPE
-    // ==================================================
-
     gyroXChar =
         await service.getCharacteristic(
             GYRO_X_UUID
@@ -364,19 +304,11 @@ async function connectToDevice()
         );
 
 
-    // ==================================================
-    // BATTERY
-    // ==================================================
-
     batteryChar =
         await service.getCharacteristic(
             BATTERY_UUID
         );
 
-
-    // ==================================================
-    // BUZZER
-    // ==================================================
 
     ledChar =
         await service.getCharacteristic(
@@ -460,7 +392,6 @@ async function connectToDevice()
         }
     );
 
-
     accelYChar.addEventListener(
         "characteristicvaluechanged",
         event =>
@@ -469,7 +400,6 @@ async function connectToDevice()
                 decode(event);
         }
     );
-
 
     accelZChar.addEventListener(
         "characteristicvaluechanged",
@@ -494,7 +424,6 @@ async function connectToDevice()
         }
     );
 
-
     gyroYChar.addEventListener(
         "characteristicvaluechanged",
         event =>
@@ -503,7 +432,6 @@ async function connectToDevice()
                 decode(event);
         }
     );
-
 
     gyroZChar.addEventListener(
         "characteristicvaluechanged",
@@ -540,12 +468,13 @@ async function connectToDevice()
             const value =
                 decode(event);
 
-
             latitude.textContent =
                 value;
 
-
-            updateTrackerMap();
+            updateTrackerMap(
+                latitude.textContent,
+                longitude.textContent
+            );
         }
     );
 
@@ -561,12 +490,13 @@ async function connectToDevice()
             const value =
                 decode(event);
 
-
             longitude.textContent =
                 value;
 
-
-            updateTrackerMap();
+            updateTrackerMap(
+                latitude.textContent,
+                longitude.textContent
+            );
         }
     );
 
@@ -610,19 +540,14 @@ async function connectToDevice()
             const value =
                 decode(event);
 
-
             gpsStatus.textContent =
                 value;
 
-
-            if (
-                value === "FIXED"
-            )
+            if (value === "FIXED")
             {
                 gpsStatus.className =
                     "gps-fixed";
             }
-
             else
             {
                 gpsStatus.className =
@@ -633,24 +558,22 @@ async function connectToDevice()
 
 
     // ==================================================
-    // INITIAL BATTERY READ
+    // INITIAL BATTERY
     // ==================================================
 
     const batteryValue =
         await batteryChar.readValue();
-
 
     batteryText.textContent =
         batteryValue.getUint8(0);
 
 
     // ==================================================
-    // INITIAL GPS STATUS READ
+    // INITIAL GPS STATUS
     // ==================================================
 
     const gpsStatusValue =
         await gpsStatusChar.readValue();
-
 
     gpsStatus.textContent =
         decodeValue(
@@ -659,11 +582,10 @@ async function connectToDevice()
 
 
     // ==================================================
-    // UPDATE UI
+    // UI
     // ==================================================
 
     setConnectedUI();
-
 
     console.log(
         "Smart Tracker fully connected."
@@ -680,26 +602,20 @@ function setConnectedUI()
     statusText.textContent =
         "Connected";
 
-
     statusText.className =
         "status connected";
-
 
     connectBtn.disabled =
         true;
 
-
     connectBtn.textContent =
         "Connected";
-
 
     ledBtn.disabled =
         false;
 
-
     writeLastSeenBtn.disabled =
         false;
-
 
     readLastSeenBtn.disabled =
         false;
@@ -707,7 +623,7 @@ function setConnectedUI()
 
 
 // ======================================================
-// DECODE BLE TEXT
+// DECODE
 // ======================================================
 
 function decode(event)
@@ -735,19 +651,14 @@ function handleMotion(event)
     const value =
         decode(event);
 
-
     motionText.textContent =
         value;
 
-
-    if (
-        value === "MOVING"
-    )
+    if (value === "MOVING")
     {
         motionText.className =
             "motion moving";
     }
-
     else
     {
         motionText.className =
@@ -767,10 +678,8 @@ async function toggleLED()
         return;
     }
 
-
     const encoder =
         new TextEncoder();
-
 
     try
     {
@@ -780,25 +689,20 @@ async function toggleLED()
                 encoder.encode("OFF")
             );
 
-
             ledBtn.textContent =
                 "Turn ON Sound";
-
 
             ledOn =
                 false;
         }
-
         else
         {
             await ledChar.writeValue(
                 encoder.encode("ON")
             );
 
-
             ledBtn.textContent =
                 "Turn OFF Sound";
-
 
             ledOn =
                 true;
@@ -826,17 +730,21 @@ async function writeLastSeen()
         return;
     }
 
-
     const lastSeen =
     {
-        lat:
+        latitude:
             Number(
                 latitude.textContent
             ),
 
-        lng:
+        longitude:
             Number(
                 longitude.textContent
+            ),
+
+        altitude:
+            Number(
+                altitude.textContent
             ),
 
         battery:
@@ -844,16 +752,14 @@ async function writeLastSeen()
                 batteryText.textContent
             ),
 
-        time:
+        timestamp:
             new Date().toISOString()
     };
-
 
     const json =
         JSON.stringify(
             lastSeen
         );
-
 
     try
     {
@@ -862,7 +768,6 @@ async function writeLastSeen()
                 json
             )
         );
-
 
         console.log(
             "Last Seen Written:",
@@ -891,24 +796,20 @@ async function readLastSeen()
         return;
     }
 
-
     try
     {
         const value =
             await lastSeenChar.readValue();
-
 
         const json =
             new TextDecoder().decode(
                 value
             );
 
-
         console.log(
             "Last Seen:",
             json
         );
-
 
         alert(json);
     }
@@ -935,40 +836,39 @@ function onDisconnected()
 
 
     // ==================================================
-    // STATUS
+    // BLE STATUS
     // ==================================================
 
     statusText.textContent =
         "Disconnected";
-
 
     statusText.className =
         "status";
 
 
     // ==================================================
-    // MOTION
+    // IMPORTANT
+    //
+    // DO NOT CLEAR GPS.
+    //
+    // Firebase will continue supplying GPS.
+    // ==================================================
+
+
+    // ==================================================
+    // SENSOR VALUES
     // ==================================================
 
     motionText.textContent =
         "--";
 
-
     motionText.className =
         "motion";
 
 
-    // ==================================================
-    // BATTERY
-    // ==================================================
-
     batteryText.textContent =
         "--";
 
-
-    // ==================================================
-    // ACCELEROMETER
-    // ==================================================
 
     ax.textContent =
         "0.00";
@@ -979,10 +879,6 @@ function onDisconnected()
     az.textContent =
         "0.00";
 
-
-    // ==================================================
-    // GYROSCOPE
-    // ==================================================
 
     gx.textContent =
         "0.00";
@@ -995,28 +891,15 @@ function onDisconnected()
 
 
     // ==================================================
-    // GPS
+    // DO NOT CLEAR THESE:
+    //
+    // latitude
+    // longitude
+    // altitude
+    // gpsTime
+    //
+    // Firebase owns current GPS.
     // ==================================================
-
-    gpsStatus.textContent =
-        "SEARCHING";
-
-
-    gpsStatus.className =
-        "gps-searching";
-
-
-    latitude.textContent =
-        "--";
-
-    longitude.textContent =
-        "--";
-
-    altitude.textContent =
-        "--";
-
-    gpsTime.textContent =
-        "--";
 
 
     // ==================================================
@@ -1026,22 +909,17 @@ function onDisconnected()
     connectBtn.disabled =
         false;
 
-
     connectBtn.textContent =
         "Connect Device";
-
 
     ledBtn.disabled =
         true;
 
-
     ledBtn.textContent =
         "Turn ON Sound";
 
-
     writeLastSeenBtn.disabled =
         true;
-
 
     readLastSeenBtn.disabled =
         true;
@@ -1052,7 +930,7 @@ function onDisconnected()
 
 
     // ==================================================
-    // CHARACTERISTICS
+    // CLEAR BLE OBJECTS
     // ==================================================
 
     server =
@@ -1061,13 +939,11 @@ function onDisconnected()
     service =
         null;
 
-
     motionChar =
         null;
 
     lastSeenChar =
         null;
-
 
     accelXChar =
         null;
@@ -1078,7 +954,6 @@ function onDisconnected()
     accelZChar =
         null;
 
-
     gyroXChar =
         null;
 
@@ -1088,13 +963,11 @@ function onDisconnected()
     gyroZChar =
         null;
 
-
     batteryChar =
         null;
 
     ledChar =
         null;
-
 
     gpsLatitudeChar =
         null;

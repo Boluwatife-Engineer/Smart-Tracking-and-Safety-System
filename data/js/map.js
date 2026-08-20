@@ -3,11 +3,10 @@
 // ======================================================
 
 import {
-    latitude,
-    longitude,
     mapLatitude,
     mapLongitude
 } from "./dom.js";
+
 
 let map;
 let trackerMarker;
@@ -17,10 +16,12 @@ let trackerMarker;
 // INITIALIZE MAP
 // ======================================================
 
-map = L.map("map").setView(
-    [6.5244, 3.3792],
-    15
-);
+map =
+    L.map("map").setView(
+        [6.5244, 3.3792],
+        15
+    );
+
 
 L.tileLayer(
     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -32,16 +33,19 @@ L.tileLayer(
 
 
 // ======================================================
-// UPDATE MAP
+// UPDATE MAP FROM FIREBASE
 // ======================================================
 
-function updateTrackerMap()
+function updateTrackerMap(
+    lat,
+    lng
+)
 {
-    const lat =
-        Number(latitude.textContent);
+    lat =
+        Number(lat);
 
-    const lng =
-        Number(longitude.textContent);
+    lng =
+        Number(lng);
 
 
     if (
@@ -53,9 +57,9 @@ function updateTrackerMap()
     }
 
 
-    // ==============================
-    // UPDATE COORDINATES
-    // ==============================
+    // ==============================================
+    // DISPLAY COORDINATES
+    // ==============================================
 
     mapLatitude.textContent =
         lat.toFixed(6);
@@ -65,12 +69,15 @@ function updateTrackerMap()
 
 
     const position =
-        [lat, lng];
+        [
+            lat,
+            lng
+        ];
 
 
-    // ==============================
+    // ==============================================
     // CREATE MARKER
-    // ==============================
+    // ==============================================
 
     if (!trackerMarker)
     {
@@ -84,9 +91,10 @@ function updateTrackerMap()
         trackerMarker.openPopup();
     }
 
-    // ==============================
+
+    // ==============================================
     // MOVE MARKER
-    // ==============================
+    // ==============================================
 
     else
     {
@@ -96,9 +104,9 @@ function updateTrackerMap()
     }
 
 
-    // ==============================
+    // ==============================================
     // CENTER MAP
-    // ==============================
+    // ==============================================
 
     map.setView(
         position,
@@ -106,10 +114,6 @@ function updateTrackerMap()
     );
 }
 
-
-// ======================================================
-// EXPORT
-// ======================================================
 
 export {
     updateTrackerMap
