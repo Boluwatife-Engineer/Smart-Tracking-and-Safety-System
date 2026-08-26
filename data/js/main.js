@@ -5,9 +5,7 @@
 import {
     connect,
     autoConnect,
-    toggleLED,
-    writeLastSeen,
-    readLastSeen
+    toggleLED
 } from "./ble.js";
 
 
@@ -16,11 +14,11 @@ import {
 // ======================================================
 
 import {
+
     connectBtn,
     ledBtn,
-    writeLastSeenBtn,
-    readLastSeenBtn,
 
+    statusText,
     bleStatus,
 
     firebaseGpsStatus,
@@ -37,6 +35,7 @@ import {
     lastLongitude,
     lastAltitude,
     lastLocationTime
+
 } from "./dom.js";
 
 
@@ -69,19 +68,10 @@ connectBtn.addEventListener(
     connect
 );
 
+
 ledBtn.addEventListener(
     "click",
     toggleLED
-);
-
-writeLastSeenBtn.addEventListener(
-    "click",
-    writeLastSeen
-);
-
-readLastSeenBtn.addEventListener(
-    "click",
-    readLastSeen
 );
 
 
@@ -98,12 +88,14 @@ async function getFirebaseData(path)
                 `${FIREBASE_BASE_URL}${TRACKER_PATH}/${path}.json`
             );
 
+
         if (!response.ok)
         {
             throw new Error(
                 `Firebase HTTP ${response.status}`
             );
         }
+
 
         return await response.json();
     }
@@ -123,11 +115,18 @@ async function getFirebaseData(path)
 // ======================================================
 // UPDATE CURRENT GPS
 // ======================================================
+//
+// Firebase /current is the authoritative source
+// for the latest valid GPS location.
+//
+// This works even when BLE is disconnected.
+// ======================================================
 
 async function updateCurrentGPS()
 {
     const current =
         await getFirebaseData("current");
+
 
     if (!current)
     {
@@ -145,10 +144,16 @@ async function updateCurrentGPS()
     )
     {
         const lat =
-            Number(current.latitude);
+            Number(
+                current.latitude
+            );
 
-        latitude.textContent =
-            lat.toFixed(6);
+
+        if (Number.isFinite(lat))
+        {
+            latitude.textContent =
+                lat.toFixed(6);
+        }
     }
 
 
@@ -162,10 +167,16 @@ async function updateCurrentGPS()
     )
     {
         const lng =
-            Number(current.longitude);
+            Number(
+                current.longitude
+            );
 
-        longitude.textContent =
-            lng.toFixed(6);
+
+        if (Number.isFinite(lng))
+        {
+            longitude.textContent =
+                lng.toFixed(6);
+        }
     }
 
 
@@ -178,10 +189,17 @@ async function updateCurrentGPS()
         current.altitude !== null
     )
     {
-        altitude.textContent =
+        const alt =
             Number(
                 current.altitude
-            ).toFixed(1);
+            );
+
+
+        if (Number.isFinite(alt))
+        {
+            altitude.textContent =
+                alt.toFixed(1);
+        }
     }
 
 
@@ -200,25 +218,7 @@ async function updateCurrentGPS()
 
 
     // ==================================================
-    // MAP
-    // ==================================================
-
-    if (
-        current.latitude !== undefined &&
-        current.longitude !== undefined &&
-        current.latitude !== null &&
-        current.longitude !== null
-    )
-    {
-        updateTrackerMap(
-            Number(current.latitude),
-            Number(current.longitude)
-        );
-    }
-
-
-    // ==================================================
-    // CURRENT LOCATION IS ALSO LAST KNOWN LOCATION
+    // UPDATE MAP
     // ==================================================
 
     if (
@@ -226,40 +226,43 @@ async function updateCurrentGPS()
         current.longitude !== undefined
     )
     {
-        lastLatitude.textContent =
+        const lat =
             Number(
                 current.latitude
-            ).toFixed(6);
+            );
 
-        lastLongitude.textContent =
+        const lng =
             Number(
                 current.longitude
-            ).toFixed(6);
-    }
+            );
 
 
-    if (
-        current.altitude !== undefined &&
-        current.altitude !== null
-    )
-    {
-        lastAltitude.textContent =
-            Number(
-                current.altitude
-            ).toFixed(1) + " m";
-    }
-
-
-    if (current.timestamp)
-    {
-        lastLocationTime.textContent =
-            current.timestamp;
+        if (
+            Number.isFinite(lat) &&
+            Number.isFinite(lng)
+        )
+        {
+            updateTrackerMap(
+                lat,
+                lng
+            );
+        }
     }
 }
 
 
 // ======================================================
 // UPDATE FIREBASE STATUS
+// ======================================================
+//
+// Firebase /status is independent of BLE.
+//
+// LOCATION_AVAILABLE:
+//     GPS has a valid fix.
+//
+// NO_FIX:
+//     Device currently has no GPS fix.
+//
 // ======================================================
 
 async function updateFirebaseStatus()
@@ -276,8 +279,10 @@ async function updateFirebaseStatus()
         firebaseGpsStatus.className =
             "gps-searching";
 
+
         locationSource.textContent =
             "-";
+
 
         locationState.textContent =
             "UNKNOWN";
@@ -285,38 +290,44 @@ async function updateFirebaseStatus()
         locationState.className =
             "gps-searching";
 
+
         statusTimestamp.textContent =
             "-";
+
 
         return;
     }
 
 
     // ==================================================
-    // STATUS
+    // GPS STATUS
     // ==================================================
 
     const gpsState =
-        status.status || "UNKNOWN";
+        status.status ||
+        "UNKNOWN";
+
 
     firebaseGpsStatus.textContent =
         gpsState;
 
 
     // ==================================================
-    // SOURCE
+    // LOCATION SOURCE
     // ==================================================
 
     locationSource.textContent =
-        status.source || "-";
+        status.source ||
+        "-";
 
 
     // ==================================================
-    // TIMESTAMP
+    // STATUS TIMESTAMP
     // ==================================================
 
     statusTimestamp.textContent =
-        status.timestamp || "-";
+        status.timestamp ||
+        "-";
 
 
     // ==================================================
@@ -331,12 +342,23 @@ async function updateFirebaseStatus()
         firebaseGpsStatus.className =
             "gps-fixed";
 
+
         locationState.textContent =
             "AVAILABLE";
 
+
         locationState.className =
             "gps-fixed";
+
+
+        // ----------------------------------------------
+        // DEVICE GPS STATUS
+        // ----------------------------------------------
+
+        gpsStatus.textContent =
+            "AVAILABLE";
     }
+
 
     else if (
         gpsState ===
@@ -346,23 +368,40 @@ async function updateFirebaseStatus()
         firebaseGpsStatus.className =
             "gps-searching";
 
+
         locationState.textContent =
             "GPS NO FIX";
 
+
         locationState.className =
             "gps-searching";
+
+
+        // ----------------------------------------------
+        // DEVICE GPS STATUS
+        // ----------------------------------------------
+
+        gpsStatus.textContent =
+            "NO FIX";
     }
+
 
     else
     {
         firebaseGpsStatus.className =
             "gps-searching";
 
+
         locationState.textContent =
             gpsState;
 
+
         locationState.className =
             "gps-searching";
+
+
+        gpsStatus.textContent =
+            gpsState;
     }
 }
 
@@ -371,11 +410,14 @@ async function updateFirebaseStatus()
 // UPDATE HISTORY
 // ======================================================
 //
-// Gets the most recent valid GPS location.
+// /history contains both:
 //
-// This is useful because /current always contains
-// the last valid GPS location.
+// LOCATION_AVAILABLE
+// NO_FIX
 //
+// We only use LOCATION_AVAILABLE entries when
+// determining the last known valid position.
+// ======================================================
 
 async function updateHistory()
 {
@@ -393,9 +435,7 @@ async function updateHistory()
         Object.values(history);
 
 
-    if (
-        entries.length === 0
-    )
+    if (entries.length === 0)
     {
         return;
     }
@@ -410,15 +450,14 @@ async function updateHistory()
             entry =>
                 entry &&
                 entry.status ===
-                "LOCATION_AVAILABLE" &&
+                    "LOCATION_AVAILABLE" &&
                 entry.latitude !== undefined &&
-                entry.longitude !== undefined
+                entry.longitude !== undefined &&
+                entry.timestamp
         );
 
 
-    if (
-        validLocations.length === 0
-    )
+    if (validLocations.length === 0)
     {
         return;
     }
@@ -433,18 +472,24 @@ async function updateHistory()
         {
             const timeA =
                 new Date(
-                    a.timestamp || 0
+                    a.timestamp
                 ).getTime();
+
 
             const timeB =
                 new Date(
-                    b.timestamp || 0
+                    b.timestamp
                 ).getTime();
+
 
             return timeB - timeA;
         }
     );
 
+
+    // ==================================================
+    // NEWEST VALID LOCATION
+    // ==================================================
 
     const latest =
         validLocations[0];
@@ -454,20 +499,34 @@ async function updateHistory()
     // LAST KNOWN LATITUDE
     // ==================================================
 
-    lastLatitude.textContent =
+    const lat =
         Number(
             latest.latitude
-        ).toFixed(6);
+        );
+
+
+    if (Number.isFinite(lat))
+    {
+        lastLatitude.textContent =
+            lat.toFixed(6);
+    }
 
 
     // ==================================================
     // LAST KNOWN LONGITUDE
     // ==================================================
 
-    lastLongitude.textContent =
+    const lng =
         Number(
             latest.longitude
-        ).toFixed(6);
+        );
+
+
+    if (Number.isFinite(lng))
+    {
+        lastLongitude.textContent =
+            lng.toFixed(6);
+    }
 
 
     // ==================================================
@@ -479,10 +538,17 @@ async function updateHistory()
         latest.altitude !== null
     )
     {
-        lastAltitude.textContent =
+        const alt =
             Number(
                 latest.altitude
-            ).toFixed(1) + " m";
+            );
+
+
+        if (Number.isFinite(alt))
+        {
+            lastAltitude.textContent =
+                alt.toFixed(1) + " m";
+        }
     }
 
 
@@ -491,12 +557,12 @@ async function updateHistory()
     // ==================================================
 
     lastLocationTime.textContent =
-        latest.timestamp || "-";
+        latest.timestamp;
 }
 
 
 // ======================================================
-// UPDATE DASHBOARD
+// UPDATE FIREBASE DASHBOARD
 // ======================================================
 
 async function updateFirebaseDashboard()
@@ -512,17 +578,21 @@ async function updateFirebaseDashboard()
 // ======================================================
 // BLE STATUS
 // ======================================================
+//
+// BLE status is completely separate from GPS status.
+//
+// BLE disconnected does NOT mean GPS disconnected.
+//
+// Firebase GPS can continue working while BLE is OFF.
+// ======================================================
 
 function updateBLEStatus()
 {
-    const connected =
-        document
-            .getElementById("status")
-            ?.textContent ===
-        "Connected";
-
-
-    if (connected)
+    if (
+        statusText &&
+        statusText.textContent ===
+            "Connected"
+    )
     {
         bleStatus.textContent =
             "Connected";
@@ -550,7 +620,16 @@ updateFirebaseDashboard();
 
 
 // ======================================================
-// REFRESH FIREBASE EVERY 3 SECONDS
+// FIREBASE REFRESH
+// ======================================================
+//
+// Refresh Firebase every 3 seconds.
+//
+// This means:
+//
+// BLE ON  -> Firebase GPS works
+// BLE OFF -> Firebase GPS still works
+//
 // ======================================================
 
 setInterval(
@@ -567,12 +646,12 @@ updateBLEStatus();
 
 
 // ======================================================
-// REFRESH BLE STATUS
+// BLE STATUS REFRESH
 // ======================================================
 
 setInterval(
     updateBLEStatus,
-    1000
+    500
 );
 
 

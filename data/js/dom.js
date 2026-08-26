@@ -2,6 +2,7 @@
 // DOM ELEMENTS
 // ======================================================
 
+
 // ======================================================
 // CONNECT
 // ======================================================
@@ -19,22 +20,7 @@ const ledBtn =
 
 
 // ======================================================
-// LAST SEEN
-// ======================================================
-
-const writeLastSeenBtn =
-    document.getElementById(
-        "writeLastSeenBtn"
-    );
-
-const readLastSeenBtn =
-    document.getElementById(
-        "readLastSeenBtn"
-    );
-
-
-// ======================================================
-// BLE STATUS
+// BLE CONNECTION STATUS
 // ======================================================
 
 const statusText =
@@ -49,24 +35,16 @@ const bleStatus =
 // ======================================================
 
 const firebaseGpsStatus =
-    document.getElementById(
-        "firebaseGpsStatus"
-    );
+    document.getElementById("firebaseGpsStatus");
 
 const locationSource =
-    document.getElementById(
-        "locationSource"
-    );
+    document.getElementById("locationSource");
 
 const locationState =
-    document.getElementById(
-        "locationState"
-    );
+    document.getElementById("locationState");
 
 const statusTimestamp =
-    document.getElementById(
-        "statusTimestamp"
-    );
+    document.getElementById("statusTimestamp");
 
 
 // ======================================================
@@ -138,24 +116,16 @@ const gpsTime =
 // ======================================================
 
 const lastLatitude =
-    document.getElementById(
-        "lastLatitude"
-    );
+    document.getElementById("lastLatitude");
 
 const lastLongitude =
-    document.getElementById(
-        "lastLongitude"
-    );
+    document.getElementById("lastLongitude");
 
 const lastAltitude =
-    document.getElementById(
-        "lastAltitude"
-    );
+    document.getElementById("lastAltitude");
 
 const lastLocationTime =
-    document.getElementById(
-        "lastLocationTime"
-    );
+    document.getElementById("lastLocationTime");
 
 
 // ======================================================
@@ -163,14 +133,10 @@ const lastLocationTime =
 // ======================================================
 
 const mapLatitude =
-    document.getElementById(
-        "mapLatitude"
-    );
+    document.getElementById("mapLatitude");
 
 const mapLongitude =
-    document.getElementById(
-        "mapLongitude"
-    );
+    document.getElementById("mapLongitude");
 
 
 // ======================================================
@@ -178,12 +144,10 @@ const mapLongitude =
 // ======================================================
 
 export {
+
     connectBtn,
 
     ledBtn,
-
-    writeLastSeenBtn,
-    readLastSeenBtn,
 
     statusText,
     bleStatus,
@@ -218,4 +182,5 @@ export {
 
     mapLatitude,
     mapLongitude
+
 };

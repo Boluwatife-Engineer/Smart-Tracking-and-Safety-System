@@ -1,6 +1,11 @@
 #include "gsm.h"
 #include "sim7600.h"
 
+#include "mpu6050.h"
+#include "battery.h"
+#include "tracker_state.h"
+
+
 // ======================================================
 // GSM STATE
 // ======================================================
@@ -31,45 +36,125 @@ void initGSM()
     Serial.println();
     Serial.println("========== GSM INITIALIZATION ==========");
 
+
+    // ==================================================
+    // SIM STATUS
+    // ==================================================
+
     sendSIM7600Command(
         "AT+CPIN?",
         1000
     );
+
+
+    // ==================================================
+    // SIGNAL
+    // ==================================================
 
     sendSIM7600Command(
         "AT+CSQ",
         1000
     );
 
+
+    // ==================================================
+    // NETWORK REGISTRATION
+    // ==================================================
+
     sendSIM7600Command(
         "AT+CEREG?",
         1000
     );
+
+
+    // ==================================================
+    // PACKET DOMAIN ATTACHMENT
+    // ==================================================
 
     sendSIM7600Command(
         "AT+CGATT?",
         1000
     );
 
+
+    // ==================================================
+    // APN
+    // ==================================================
+
     sendSIM7600Command(
         "AT+CGDCONT=1,\"IP\",\"web.gprs.mtnnigeria.net\"",
         1000
     );
+
+
+    // ==================================================
+    // ACTIVATE PDP CONTEXT
+    // ==================================================
 
     sendSIM7600Command(
         "AT+CGACT=1,1",
         5000
     );
 
+
+    // ==================================================
+    // GET IP ADDRESS
+    // ==================================================
+
     sendSIM7600Command(
         "AT+CGPADDR=1",
         2000
     );
 
-    gsmReady = true;
+
+    // ==================================================
+    // SSL CONFIGURATION
+    // ==================================================
 
     Serial.println();
-    Serial.println("GSM initialization complete.");
+    Serial.println("========== SSL CONFIGURATION ==========");
+
+
+    sendSIM7600Command(
+        "AT+CSSLCFG=\"sslversion\",0,4",
+        2000
+    );
+
+
+    sendSIM7600Command(
+        "AT+CSSLCFG=\"ignorelocaltime\",0,1",
+        2000
+    );
+
+
+    sendSIM7600Command(
+        "AT+CSSLCFG=\"seclevel\",0,0",
+        2000
+    );
+
+
+    // ==================================================
+    // CHECK SSL
+    // ==================================================
+
+    sendSIM7600Command(
+        "AT+CSSLCFG?",
+        3000
+    );
+
+
+    // ==================================================
+    // GSM READY
+    // ==================================================
+
+    gsmReady = true;
+
+
+    Serial.println();
+    Serial.println(
+        "GSM initialization complete."
+    );
+
     Serial.println();
 }
 
@@ -97,22 +182,38 @@ bool waitForResponse(
 
     unsigned long start = millis();
 
-    while (millis() - start < timeout)
+
+    while (
+        millis() - start < timeout
+    )
     {
-        while (sim7600.available())
+        while (
+            sim7600.available()
+        )
         {
-            char c = (char)sim7600.read();
+            char c =
+                (char)sim7600.read();
+
 
             response += c;
 
-            Serial.write(c);
 
-            if (response.indexOf(expected) != -1)
+            Serial.write(
+                c
+            );
+
+
+            if (
+                response.indexOf(
+                    expected
+                ) != -1
+            )
             {
                 return true;
             }
         }
     }
+
 
     return false;
 }
@@ -123,22 +224,24 @@ bool waitForResponse(
 // ======================================================
 //
 // method:
+//
 // 1 = POST
 // 2 = PUT
 //
-// IMPORTANT:
+// SIM7600 HTTPACTION:
 //
-// SIM7600 AT+HTTPACTION supports:
 // 0 = GET
 // 1 = POST
 // 2 = HEAD
 // 3 = DELETE
 //
-// Therefore we CANNOT use:
-// AT+HTTPACTION=2
+// Therefore logical PUT is implemented using:
 //
-// For PUT we use:
-// POST + X-HTTP-Method-Override: PUT
+// POST
+//
+// with:
+//
+// X-HTTP-Method-Override: PUT
 //
 // ======================================================
 
@@ -175,6 +278,7 @@ bool sendFirebaseRequest(
         "================================"
     );
 
+
     Serial.print(
         "URL: "
     );
@@ -182,6 +286,7 @@ bool sendFirebaseRequest(
     Serial.println(
         url
     );
+
 
     Serial.print(
         "Payload: "
@@ -192,7 +297,9 @@ bool sendFirebaseRequest(
     );
 
 
-    if (method == 1)
+    if (
+        method == 1
+    )
     {
         Serial.println(
             "Method: POST"
@@ -211,7 +318,7 @@ bool sendFirebaseRequest(
 
 
     // ==================================================
-    // CLEAN UART
+    // CLEAR UART
     // ==================================================
 
     while (
@@ -223,7 +330,7 @@ bool sendFirebaseRequest(
 
 
     // ==================================================
-    // END PREVIOUS HTTP SESSION
+    // TERMINATE PREVIOUS HTTP SESSION
     // ==================================================
 
     sim7600.println(
@@ -231,6 +338,7 @@ bool sendFirebaseRequest(
     );
 
     delay(500);
+
 
     while (
         sim7600.available()
@@ -243,12 +351,13 @@ bool sendFirebaseRequest(
 
 
     // ==================================================
-    // INITIALIZE HTTP
+    // HTTP INIT
     // ==================================================
 
     sim7600.println(
         "AT+HTTPINIT"
     );
+
 
     if (
         !waitForResponse(
@@ -273,6 +382,7 @@ bool sendFirebaseRequest(
         "AT+HTTPPARA=\"CID\",1"
     );
 
+
     if (
         !waitForResponse(
             "OK",
@@ -284,9 +394,11 @@ bool sendFirebaseRequest(
             "ERROR: CID failed."
         );
 
+
         sim7600.println(
             "AT+HTTPTERM"
         );
+
 
         return false;
     }
@@ -297,13 +409,21 @@ bool sendFirebaseRequest(
     // ==================================================
 
     String urlCommand =
-        "AT+HTTPPARA=\"URL\",\"" +
-        String(url) +
+        "AT+HTTPPARA=\"URL\",\"";
+
+
+    urlCommand +=
+        String(url);
+
+
+    urlCommand +=
         "\"";
+
 
     sim7600.println(
         urlCommand
     );
+
 
     if (
         !waitForResponse(
@@ -316,9 +436,11 @@ bool sendFirebaseRequest(
             "ERROR: URL setup failed."
         );
 
+
         sim7600.println(
             "AT+HTTPTERM"
         );
+
 
         return false;
     }
@@ -332,6 +454,7 @@ bool sendFirebaseRequest(
         "AT+HTTPPARA=\"CONTENT\",\"application/json\""
     );
 
+
     if (
         !waitForResponse(
             "OK",
@@ -343,22 +466,18 @@ bool sendFirebaseRequest(
             "ERROR: Content type failed."
         );
 
+
         sim7600.println(
             "AT+HTTPTERM"
         );
+
 
         return false;
     }
 
 
     // ==================================================
-    // HTTP METHOD OVERRIDE
-    // ==================================================
-    //
-    // Only use this for logical PUT requests.
-    //
-    // The actual SIM7600 transport method remains POST.
-    //
+    // PUT OVERRIDE
     // ==================================================
 
     if (
@@ -369,9 +488,11 @@ bool sendFirebaseRequest(
             "Setting HTTP PUT override header..."
         );
 
+
         sim7600.println(
             "AT+HTTPPARA=\"USERDATA\",\"X-HTTP-Method-Override: PUT\""
         );
+
 
         if (
             !waitForResponse(
@@ -384,9 +505,11 @@ bool sendFirebaseRequest(
                 "ERROR: PUT override header failed."
             );
 
+
             sim7600.println(
                 "AT+HTTPTERM"
             );
+
 
             return false;
         }
@@ -410,11 +533,18 @@ bool sendFirebaseRequest(
     // ==================================================
 
     String httpDataCommand =
-        "AT+HTTPDATA=" +
+        "AT+HTTPDATA=";
+
+
+    httpDataCommand +=
         String(
             payload.length()
-        ) +
+        );
+
+
+    httpDataCommand +=
         ",15000";
+
 
     Serial.print(
         ">> "
@@ -424,13 +554,14 @@ bool sendFirebaseRequest(
         httpDataCommand
     );
 
+
     sim7600.println(
         httpDataCommand
     );
 
 
     // ==================================================
-    // WAIT FOR DOWNLOAD
+    // WAIT DOWNLOAD
     // ==================================================
 
     if (
@@ -444,9 +575,11 @@ bool sendFirebaseRequest(
             "ERROR: DOWNLOAD prompt not received."
         );
 
+
         sim7600.println(
             "AT+HTTPTERM"
         );
+
 
         return false;
     }
@@ -460,9 +593,11 @@ bool sendFirebaseRequest(
         "Sending Firebase JSON..."
     );
 
+
     Serial.println(
         payload
     );
+
 
     sim7600.print(
         payload
@@ -470,7 +605,7 @@ bool sendFirebaseRequest(
 
 
     // ==================================================
-    // WAIT FOR PAYLOAD OK
+    // WAIT PAYLOAD ACCEPTANCE
     // ==================================================
 
     if (
@@ -484,12 +619,15 @@ bool sendFirebaseRequest(
             "ERROR: Firebase payload was not accepted."
         );
 
+
         sim7600.println(
             "AT+HTTPTERM"
         );
 
+
         return false;
     }
+
 
     Serial.println(
         "Firebase payload accepted."
@@ -511,16 +649,6 @@ bool sendFirebaseRequest(
     // ==================================================
     // HTTP ACTION
     // ==================================================
-    //
-    // IMPORTANT:
-    //
-    // Both POST and logical PUT use:
-    //
-    // AT+HTTPACTION=1
-    //
-    // The difference is the HTTP header.
-    //
-    // ==================================================
 
     if (
         method == 1
@@ -537,19 +665,21 @@ bool sendFirebaseRequest(
         );
     }
 
+
     sim7600.println(
         "AT+HTTPACTION=1"
     );
 
 
     // ==================================================
-    // WAIT FOR HTTPACTION
+    // WAIT HTTP ACTION
     // ==================================================
 
     String response = "";
 
     unsigned long start =
         millis();
+
 
     while (
         millis() - start < 30000
@@ -562,12 +692,15 @@ bool sendFirebaseRequest(
             char c =
                 (char)sim7600.read();
 
+
             response += c;
+
 
             Serial.write(
                 c
             );
         }
+
 
         if (
             response.indexOf(
@@ -581,7 +714,7 @@ bool sendFirebaseRequest(
 
 
     // ==================================================
-    // DISPLAY HTTP ACTION RESPONSE
+    // DISPLAY RESPONSE
     // ==================================================
 
     Serial.println();
@@ -596,16 +729,17 @@ bool sendFirebaseRequest(
 
 
     // ==================================================
-    // PARSE HTTP RESULT
+    // PARSE RESULT
     // ==================================================
 
-    bool success =
-        false;
+    bool success = false;
+
 
     int actionIndex =
         response.indexOf(
             "+HTTPACTION:"
         );
+
 
     if (
         actionIndex != -1
@@ -616,6 +750,7 @@ bool sendFirebaseRequest(
                 actionIndex
             );
 
+
         Serial.print(
             "Parsed HTTP ACTION: "
         );
@@ -625,9 +760,7 @@ bool sendFirebaseRequest(
         );
 
 
-        // ==================================================
         // HTTP 200
-        // ==================================================
 
         if (
             action.indexOf(
@@ -639,9 +772,7 @@ bool sendFirebaseRequest(
         }
 
 
-        // ==================================================
         // HTTP 201
-        // ==================================================
 
         if (
             action.indexOf(
@@ -653,9 +784,7 @@ bool sendFirebaseRequest(
         }
 
 
-        // ==================================================
         // HTTP 204
-        // ==================================================
 
         if (
             action.indexOf(
@@ -691,7 +820,9 @@ bool sendFirebaseRequest(
             "AT+HTTPREAD"
         );
 
+
         delay(1000);
+
 
         while (
             sim7600.available()
@@ -713,14 +844,16 @@ bool sendFirebaseRequest(
 
 
     // ==================================================
-    // CLOSE HTTP SESSION
+    // CLOSE HTTP
     // ==================================================
 
     sim7600.println(
         "AT+HTTPTERM"
     );
 
+
     delay(500);
+
 
     while (
         sim7600.available()
@@ -730,6 +863,7 @@ bool sendFirebaseRequest(
             sim7600.read()
         );
     }
+
 
     Serial.println(
         "================================"
@@ -764,11 +898,13 @@ String buildTimestamp(
             2
         );
 
+
     String month =
         gpsDate.substring(
             2,
             4
         );
+
 
     String year =
         gpsDate.substring(
@@ -776,17 +912,20 @@ String buildTimestamp(
             6
         );
 
+
     String hour =
         gpsTime.substring(
             0,
             2
         );
 
+
     String minute =
         gpsTime.substring(
             2,
             4
         );
+
 
     String second =
         gpsTime.substring(
@@ -795,25 +934,51 @@ String buildTimestamp(
         );
 
 
-    return
-        "20" +
-        year +
-        "-" +
-        month +
-        "-" +
-        day +
-        "T" +
-        hour +
-        ":" +
-        minute +
-        ":" +
-        second +
-        "Z";
+    String timestamp =
+        "20";
+
+
+    timestamp += year;
+
+    timestamp += "-";
+
+    timestamp += month;
+
+    timestamp += "-";
+
+    timestamp += day;
+
+    timestamp += "T";
+
+    timestamp += hour;
+
+    timestamp += ":";
+
+    timestamp += minute;
+
+    timestamp += ":";
+
+    timestamp += second;
+
+    timestamp += "Z";
+
+
+    return timestamp;
 }
 
 
 // ======================================================
-// SEND LOCATION
+// SEND LOCATION + TRACKER STATE
+// ======================================================
+//
+// gpsAvailable:
+//
+// true
+//  -> GPS + sensors
+//
+// false
+//  -> sensors only
+//
 // ======================================================
 
 bool sendLocation(
@@ -821,12 +986,11 @@ bool sendLocation(
     float longitude,
     float altitude,
     String gpsTime,
-    String gpsDate
+    String gpsDate,
+    bool gpsAvailable
 )
 {
-    if (
-        !gsmReady
-    )
+    if (!gsmReady)
     {
         Serial.println(
             "GSM is not ready."
@@ -848,37 +1012,457 @@ bool sendLocation(
 
 
     // ==================================================
-    // LOCATION PAYLOAD
+    // SENSOR VALUES
     // ==================================================
 
-    String locationPayload =
-        "{"
-        "\"latitude\":" +
+    float accelX =
+        getAccelX();
+
+    float accelY =
+        getAccelY();
+
+    float accelZ =
+        getAccelZ();
+
+
+    float gyroX =
+        getGyroX();
+
+    float gyroY =
+        getGyroY();
+
+    float gyroZ =
+        getGyroZ();
+
+
+    uint8_t battery =
+        getBatteryLevel();
+
+
+    bool moving =
+        isMoving();
+
+
+    const char *motion =
+        moving
+            ? "MOVING"
+            : "STATIONARY";
+
+
+    const char *trackerMode =
+        getTrackerModeName();
+
+
+    // ==================================================
+    // STATUS
+    // ==================================================
+
+    const char *status =
+        gpsAvailable
+            ? "LOCATION_AVAILABLE"
+            : "SENSOR_ONLY";
+
+
+    const char *source =
+        gpsAvailable
+            ? "device_gps"
+            : "device_sensor";
+
+
+    // ==================================================
+    // DISPLAY
+    // ==================================================
+
+    Serial.println();
+    Serial.println(
+        "================================"
+    );
+
+    Serial.println(
+        "TRACKER STATE"
+    );
+
+    Serial.println(
+        "================================"
+    );
+
+
+    Serial.print(
+        "GPS: "
+    );
+
+    Serial.println(
+        gpsAvailable
+            ? "AVAILABLE"
+            : "NOT AVAILABLE"
+    );
+
+
+    Serial.print(
+        "Motion: "
+    );
+
+    Serial.println(
+        motion
+    );
+
+
+    Serial.print(
+        "Tracker Mode: "
+    );
+
+    Serial.println(
+        trackerMode
+    );
+
+
+    Serial.print(
+        "Battery: "
+    );
+
+    Serial.print(
+        battery
+    );
+
+    Serial.println(
+        "%"
+    );
+
+
+    Serial.print(
+        "Accel X: "
+    );
+
+    Serial.println(
+        accelX,
+        2
+    );
+
+
+    Serial.print(
+        "Accel Y: "
+    );
+
+    Serial.println(
+        accelY,
+        2
+    );
+
+
+    Serial.print(
+        "Accel Z: "
+    );
+
+    Serial.println(
+        accelZ,
+        2
+    );
+
+
+    Serial.print(
+        "Gyro X: "
+    );
+
+    Serial.println(
+        gyroX,
+        2
+    );
+
+
+    Serial.print(
+        "Gyro Y: "
+    );
+
+    Serial.println(
+        gyroY,
+        2
+    );
+
+
+    Serial.print(
+        "Gyro Z: "
+    );
+
+    Serial.println(
+        gyroZ,
+        2
+    );
+
+
+    // ==================================================
+    // BUILD CURRENT PAYLOAD
+    // ==================================================
+
+    String currentPayload = "{";
+
+
+    // ==================================================
+    // GPS DATA
+    // ==================================================
+
+    if (
+        gpsAvailable
+    )
+    {
+        currentPayload +=
+            "\"latitude\":";
+
+
+        currentPayload +=
+            String(
+                latitude,
+                6
+            );
+
+
+        currentPayload +=
+            ",";
+
+
+        currentPayload +=
+            "\"longitude\":";
+
+
+        currentPayload +=
+            String(
+                longitude,
+                6
+            );
+
+
+        currentPayload +=
+            ",";
+
+
+        currentPayload +=
+            "\"altitude\":";
+
+
+        currentPayload +=
+            String(
+                altitude,
+                1
+            );
+
+
+        currentPayload +=
+            ",";
+
+
+        currentPayload +=
+            "\"gpsTime\":\"";
+
+
+        currentPayload +=
+            gpsTime;
+
+
+        currentPayload +=
+            "\",";
+
+
+        currentPayload +=
+            "\"gpsDate\":\"";
+
+
+        currentPayload +=
+            gpsDate;
+
+
+        currentPayload +=
+            "\",";
+    }
+
+
+    // ==================================================
+    // COMMON DATA
+    // ==================================================
+
+    currentPayload +=
+        "\"timestamp\":\"";
+
+
+    currentPayload +=
+        timestamp;
+
+
+    currentPayload +=
+        "\",";
+
+
+    currentPayload +=
+        "\"source\":\"";
+
+
+    currentPayload +=
+        source;
+
+
+    currentPayload +=
+        "\",";
+
+
+    currentPayload +=
+        "\"status\":\"";
+
+
+    currentPayload +=
+        status;
+
+
+    currentPayload +=
+        "\",";
+
+
+    currentPayload +=
+        "\"motion\":\"";
+
+
+    currentPayload +=
+        motion;
+
+
+    currentPayload +=
+        "\",";
+
+
+    currentPayload +=
+        "\"trackerMode\":\"";
+
+
+    currentPayload +=
+        trackerMode;
+
+
+    currentPayload +=
+        "\",";
+
+
+    currentPayload +=
+        "\"battery\":";
+
+
+    currentPayload +=
         String(
-            latitude,
-            6
-        ) +
-        ","
-        "\"longitude\":" +
+            battery
+        );
+
+
+    currentPayload +=
+        ",";
+
+
+    // ==================================================
+    // ACCELEROMETER
+    // ==================================================
+
+    currentPayload +=
+        "\"acceleration\":{";
+
+
+    currentPayload +=
+        "\"x\":";
+
+
+    currentPayload +=
         String(
-            longitude,
-            6
-        ) +
-        ","
-        "\"altitude\":" +
+            accelX,
+            3
+        );
+
+
+    currentPayload +=
+        ",";
+
+
+    currentPayload +=
+        "\"y\":";
+
+
+    currentPayload +=
         String(
-            altitude,
-            1
-        ) +
-        ","
-        "\"gpsTime\":\"" +
-        gpsTime +
-        "\","
-        "\"timestamp\":\"" +
-        timestamp +
-        "\","
-        "\"source\":\"device_gps\","
-        "\"status\":\"LOCATION_AVAILABLE\""
+            accelY,
+            3
+        );
+
+
+    currentPayload +=
+        ",";
+
+
+    currentPayload +=
+        "\"z\":";
+
+
+    currentPayload +=
+        String(
+            accelZ,
+            3
+        );
+
+
+    currentPayload +=
+        "},";
+
+
+    // ==================================================
+    // GYROSCOPE
+    // ==================================================
+
+    currentPayload +=
+        "\"gyroscope\":{";
+
+
+    currentPayload +=
+        "\"x\":";
+
+
+    currentPayload +=
+        String(
+            gyroX,
+            3
+        );
+
+
+    currentPayload +=
+        ",";
+
+
+    currentPayload +=
+        "\"y\":";
+
+
+    currentPayload +=
+        String(
+            gyroY,
+            3
+        );
+
+
+    currentPayload +=
+        ",";
+
+
+    currentPayload +=
+        "\"z\":";
+
+
+    currentPayload +=
+        String(
+            gyroZ,
+            3
+        );
+
+
+    currentPayload +=
+        "}";
+
+
+    // ==================================================
+    // CLOSE JSON
+    // ==================================================
+
+    currentPayload +=
         "}";
 
 
@@ -886,15 +1470,200 @@ bool sendLocation(
     // STATUS PAYLOAD
     // ==================================================
 
-    String statusPayload =
-        "{"
-        "\"status\":\"LOCATION_AVAILABLE\","
-        "\"source\":\"device_gps\","
-        "\"timestamp\":\"" +
-        timestamp +
-        "\""
+    String statusPayload = "{";
+
+
+    statusPayload +=
+        "\"status\":\"";
+
+
+    statusPayload +=
+        status;
+
+
+    statusPayload +=
+        "\",";
+
+
+    statusPayload +=
+        "\"source\":\"";
+
+
+    statusPayload +=
+        source;
+
+
+    statusPayload +=
+        "\",";
+
+
+    statusPayload +=
+        "\"motion\":\"";
+
+
+    statusPayload +=
+        motion;
+
+
+    statusPayload +=
+        "\",";
+
+
+    statusPayload +=
+        "\"trackerMode\":\"";
+
+
+    statusPayload +=
+        trackerMode;
+
+
+    statusPayload +=
+        "\",";
+
+
+    statusPayload +=
+        "\"battery\":";
+
+
+    statusPayload +=
+        String(
+            battery
+        );
+
+
+    statusPayload +=
+        ",";
+
+
+    statusPayload +=
+        "\"timestamp\":\"";
+
+
+    statusPayload +=
+        timestamp;
+
+
+    statusPayload +=
+        "\",";
+
+
+    // ==================================================
+    // STATUS ACCELERATION
+    // ==================================================
+
+    statusPayload +=
+        "\"acceleration\":{";
+
+
+    statusPayload +=
+        "\"x\":";
+
+
+    statusPayload +=
+        String(
+            accelX,
+            3
+        );
+
+
+    statusPayload +=
+        ",";
+
+
+    statusPayload +=
+        "\"y\":";
+
+
+    statusPayload +=
+        String(
+            accelY,
+            3
+        );
+
+
+    statusPayload +=
+        ",";
+
+
+    statusPayload +=
+        "\"z\":";
+
+
+    statusPayload +=
+        String(
+            accelZ,
+            3
+        );
+
+
+    statusPayload +=
+        "},";
+
+
+    // ==================================================
+    // STATUS GYROSCOPE
+    // ==================================================
+
+    statusPayload +=
+        "\"gyroscope\":{";
+
+
+    statusPayload +=
+        "\"x\":";
+
+
+    statusPayload +=
+        String(
+            gyroX,
+            3
+        );
+
+
+    statusPayload +=
+        ",";
+
+
+    statusPayload +=
+        "\"y\":";
+
+
+    statusPayload +=
+        String(
+            gyroY,
+            3
+        );
+
+
+    statusPayload +=
+        ",";
+
+
+    statusPayload +=
+        "\"z\":";
+
+
+    statusPayload +=
+        String(
+            gyroZ,
+            3
+        );
+
+
+    statusPayload +=
         "}";
 
+
+    // ==================================================
+    // CLOSE STATUS JSON
+    // ==================================================
+
+    statusPayload +=
+        "}";
+
+
+    // ==================================================
+    // DISPLAY PAYLOAD
+    // ==================================================
 
     Serial.println();
 
@@ -903,11 +1672,15 @@ bool sendLocation(
     );
 
     Serial.println(
-        "GPS LOCATION AVAILABLE"
+        "FIREBASE TRACKER UPDATE"
     );
 
     Serial.println(
-        locationPayload
+        "================================"
+    );
+
+    Serial.println(
+        currentPayload
     );
 
     Serial.println(
@@ -916,52 +1689,53 @@ bool sendLocation(
 
 
     // ==================================================
-    // 1. HISTORY
+    // HISTORY
     // ==================================================
 
     Serial.println(
-        "Saving location to HISTORY..."
+        "Saving tracker state to HISTORY..."
     );
+
 
     bool historySuccess =
         sendFirebaseRequest(
             historyURL,
-            locationPayload,
+            currentPayload,
             1
         );
 
-    delay(
-        1000
-    );
+
+    delay(1000);
 
 
     // ==================================================
-    // 2. CURRENT
+    // CURRENT
     // ==================================================
 
     Serial.println(
-        "Updating CURRENT location..."
+        "Updating CURRENT tracker state..."
     );
+
 
     bool currentSuccess =
         sendFirebaseRequest(
             currentURL,
-            locationPayload,
+            currentPayload,
             2
         );
 
-    delay(
-        1000
-    );
+
+    delay(1000);
 
 
     // ==================================================
-    // 3. STATUS
+    // STATUS
     // ==================================================
 
     Serial.println(
         "Updating STATUS..."
     );
+
 
     bool statusSuccess =
         sendFirebaseRequest(
@@ -978,7 +1752,7 @@ bool sendLocation(
     Serial.println();
 
     Serial.println(
-        "Firebase GPS upload results:"
+        "Firebase tracker upload results:"
     );
 
 
@@ -1024,7 +1798,7 @@ bool sendLocation(
         Serial.println();
 
         Serial.println(
-            "GPS LOCATION UPDATE SUCCESSFUL."
+            "COMPLETE TRACKER UPDATE SUCCESSFUL."
         );
     }
     else
@@ -1032,7 +1806,7 @@ bool sendLocation(
         Serial.println();
 
         Serial.println(
-            "GPS LOCATION UPDATE FAILED."
+            "COMPLETE TRACKER UPDATE FAILED."
         );
     }
 
@@ -1047,15 +1821,29 @@ bool sendLocation(
 // ======================================================
 // LOG GPS NO FIX
 // ======================================================
+//
+// Saves sensor information even when GPS has no fix.
+//
+// Saves:
+//
+// - GPS status
+// - GPS date
+// - GPS time
+// - timestamp
+// - motion
+// - tracker mode
+// - battery
+// - accelerometer
+// - gyroscope
+//
+// ======================================================
 
 bool logGPSNoFix(
     String gpsTime,
     String gpsDate
 )
 {
-    if (
-        !gsmReady
-    )
+    if (!gsmReady)
     {
         Serial.println(
             "GSM is not ready."
@@ -1077,34 +1865,50 @@ bool logGPSNoFix(
 
 
     // ==================================================
-    // HISTORY PAYLOAD
+    // SENSOR VALUES
     // ==================================================
 
-    String historyPayload =
-        "{"
-        "\"status\":\"NO_FIX\","
-        "\"source\":\"device_gps\","
-        "\"reason\":\"no_satellite_fix\","
-        "\"timestamp\":\"" +
-        timestamp +
-        "\""
-        "}";
+    float accelX =
+        getAccelX();
+
+    float accelY =
+        getAccelY();
+
+    float accelZ =
+        getAccelZ();
+
+
+    float gyroX =
+        getGyroX();
+
+    float gyroY =
+        getGyroY();
+
+    float gyroZ =
+        getGyroZ();
+
+
+    uint8_t battery =
+        getBatteryLevel();
+
+
+    bool moving =
+        isMoving();
+
+
+    const char *motion =
+        moving
+            ? "MOVING"
+            : "STATIONARY";
+
+
+    const char *trackerMode =
+        getTrackerModeName();
 
 
     // ==================================================
-    // STATUS PAYLOAD
+    // DISPLAY
     // ==================================================
-
-    String statusPayload =
-        "{"
-        "\"status\":\"NO_FIX\","
-        "\"source\":\"device_gps\","
-        "\"reason\":\"no_satellite_fix\","
-        "\"timestamp\":\"" +
-        timestamp +
-        "\""
-        "}";
-
 
     Serial.println();
 
@@ -1113,15 +1917,7 @@ bool logGPSNoFix(
     );
 
     Serial.println(
-        "GPS NO FIX"
-    );
-
-    Serial.println(
-        "Logging GPS failure..."
-    );
-
-    Serial.println(
-        historyPayload
+        "GPS NO-FIX TRACKER STATE"
     );
 
     Serial.println(
@@ -1129,74 +1925,392 @@ bool logGPSNoFix(
     );
 
 
+    Serial.print(
+        "GPS Date: "
+    );
+
+    Serial.println(
+        gpsDate
+    );
+
+
+    Serial.print(
+        "GPS Time: "
+    );
+
+    Serial.println(
+        gpsTime
+    );
+
+
+    Serial.print(
+        "Motion: "
+    );
+
+    Serial.println(
+        motion
+    );
+
+
+    Serial.print(
+        "Tracker Mode: "
+    );
+
+    Serial.println(
+        trackerMode
+    );
+
+
+    Serial.print(
+        "Battery: "
+    );
+
+    Serial.print(
+        battery
+    );
+
+    Serial.println(
+        "%"
+    );
+
+
+    Serial.print(
+        "Accel X: "
+    );
+
+    Serial.println(
+        accelX,
+        2
+    );
+
+
+    Serial.print(
+        "Accel Y: "
+    );
+
+    Serial.println(
+        accelY,
+        2
+    );
+
+
+    Serial.print(
+        "Accel Z: "
+    );
+
+    Serial.println(
+        accelZ,
+        2
+    );
+
+
+    Serial.print(
+        "Gyro X: "
+    );
+
+    Serial.println(
+        gyroX,
+        2
+    );
+
+
+    Serial.print(
+        "Gyro Y: "
+    );
+
+    Serial.println(
+        gyroY,
+        2
+    );
+
+
+    Serial.print(
+        "Gyro Z: "
+    );
+
+    Serial.println(
+        gyroZ,
+        2
+    );
+
+
     // ==================================================
-    // HISTORY
+    // BUILD PAYLOAD
     // ==================================================
 
-    bool historySuccess =
+    String payload = "{";
+
+
+    // ==================================================
+    // GPS STATUS
+    // ==================================================
+
+    payload +=
+        "\"status\":\"NO_FIX\",";
+
+
+    payload +=
+        "\"source\":\"device_sensor\",";
+
+
+    payload +=
+        "\"gpsTime\":\"";
+
+
+    payload +=
+        gpsTime;
+
+
+    payload +=
+        "\",";
+
+
+    payload +=
+        "\"gpsDate\":\"";
+
+
+    payload +=
+        gpsDate;
+
+
+    payload +=
+        "\",";
+
+
+    payload +=
+        "\"timestamp\":\"";
+
+
+    payload +=
+        timestamp;
+
+
+    payload +=
+        "\",";
+
+
+    // ==================================================
+    // MOTION
+    // ==================================================
+
+    payload +=
+        "\"motion\":\"";
+
+
+    payload +=
+        motion;
+
+
+    payload +=
+        "\",";
+
+
+    // ==================================================
+    // TRACKER MODE
+    // ==================================================
+
+    payload +=
+        "\"trackerMode\":\"";
+
+
+    payload +=
+        trackerMode;
+
+
+    payload +=
+        "\",";
+
+
+    // ==================================================
+    // BATTERY
+    // ==================================================
+
+    payload +=
+        "\"battery\":";
+
+
+    payload +=
+        String(
+            battery
+        );
+
+
+    payload +=
+        ",";
+
+
+    // ==================================================
+    // ACCELEROMETER
+    // ==================================================
+
+    payload +=
+        "\"acceleration\":{";
+
+
+    payload +=
+        "\"x\":";
+
+
+    payload +=
+        String(
+            accelX,
+            3
+        );
+
+
+    payload +=
+        ",";
+
+
+    payload +=
+        "\"y\":";
+
+
+    payload +=
+        String(
+            accelY,
+            3
+        );
+
+
+    payload +=
+        ",";
+
+
+    payload +=
+        "\"z\":";
+
+
+    payload +=
+        String(
+            accelZ,
+            3
+        );
+
+
+    payload +=
+        "},";
+
+
+    // ==================================================
+    // GYROSCOPE
+    // ==================================================
+
+    payload +=
+        "\"gyroscope\":{";
+
+
+    payload +=
+        "\"x\":";
+
+
+    payload +=
+        String(
+            gyroX,
+            3
+        );
+
+
+    payload +=
+        ",";
+
+
+    payload +=
+        "\"y\":";
+
+
+    payload +=
+        String(
+            gyroY,
+            3
+        );
+
+
+    payload +=
+        ",";
+
+
+    payload +=
+        "\"z\":";
+
+
+    payload +=
+        String(
+            gyroZ,
+            3
+        );
+
+
+    payload +=
+        "}";
+
+
+    // ==================================================
+    // CLOSE JSON
+    // ==================================================
+
+    payload +=
+        "}";
+
+
+    // ==================================================
+    // DISPLAY PAYLOAD
+    // ==================================================
+
+    Serial.println();
+
+    Serial.println(
+        "GPS NO-FIX PAYLOAD:"
+    );
+
+
+    Serial.println(
+        payload
+    );
+
+
+    // ==================================================
+    // SAVE TO HISTORY
+    // ==================================================
+
+    Serial.println();
+
+    Serial.println(
+        "Saving GPS NO_FIX state to HISTORY..."
+    );
+
+
+    bool success =
         sendFirebaseRequest(
             historyURL,
-            historyPayload,
+            payload,
             1
         );
 
-    delay(
-        1000
-    );
-
 
     // ==================================================
-    // STATUS
+    // RESULT
     // ==================================================
 
-    bool statusSuccess =
-        sendFirebaseRequest(
-            statusURL,
-            statusPayload,
-            2
+    if (
+        success
+    )
+    {
+        Serial.println();
+
+        Serial.println(
+            "GPS NO_FIX STATE SAVED SUCCESSFULLY."
         );
+    }
+    else
+    {
+        Serial.println();
+
+        Serial.println(
+            "FAILED TO SAVE GPS NO_FIX STATE."
+        );
+    }
 
 
-    // ==================================================
-    // CURRENT IS NOT TOUCHED
-    // ==================================================
-    //
-    // When GPS has no fix, /current keeps the
-    // last known valid GPS position.
-    //
-    // ==================================================
-
-
-    Serial.println();
-
-    Serial.println(
-        "GPS NO FIX upload results:"
-    );
-
-
-    Serial.print(
-        "History: "
-    );
-
-    Serial.println(
-        historySuccess
-            ? "SUCCESS"
-            : "FAILED"
-    );
-
-
-    Serial.print(
-        "Status: "
-    );
-
-    Serial.println(
-        statusSuccess
-            ? "SUCCESS"
-            : "FAILED"
-    );
-
-
-    return
-        historySuccess &&
-        statusSuccess;
+    return success;
 }
