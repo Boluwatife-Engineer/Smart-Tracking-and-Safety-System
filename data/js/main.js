@@ -26,6 +26,17 @@ import {
     locationState,
     statusTimestamp,
 
+    motionText,
+    batteryText,
+
+    ax,
+    ay,
+    az,
+
+    gx,
+    gy,
+    gz,
+
     latitude,
     longitude,
     altitude,
@@ -113,6 +124,286 @@ async function getFirebaseData(path)
 
 
 // ======================================================
+// UPDATE CURRENT SENSOR DATA
+// ======================================================
+//
+// Firebase /current is now the fallback source for:
+//
+// - Motion
+// - Battery
+// - Acceleration
+// - Gyroscope
+//
+// This is important because these values must still
+// appear when BLE is disconnected.
+//
+// ======================================================
+
+async function updateCurrentSensors()
+{
+    const current =
+        await getFirebaseData("current");
+
+
+    if (!current)
+    {
+        return;
+    }
+
+
+    // ==================================================
+    // MOTION
+    // ==================================================
+
+    if (
+        current.motion !== undefined &&
+        current.motion !== null
+    )
+    {
+        const motion =
+            String(
+                current.motion
+            );
+
+
+        motionText.textContent =
+            motion;
+
+
+        if (
+            motion ===
+            "MOVING"
+        )
+        {
+            motionText.className =
+                "motion moving";
+        }
+
+        else
+        {
+            motionText.className =
+                "motion stationary";
+        }
+    }
+
+
+    // ==================================================
+    // BATTERY
+    // ==================================================
+
+    if (
+        current.battery !== undefined &&
+        current.battery !== null
+    )
+    {
+        const battery =
+            Number(
+                current.battery
+            );
+
+
+        if (
+            Number.isFinite(
+                battery
+            )
+        )
+        {
+            batteryText.textContent =
+                battery;
+        }
+    }
+
+
+    // ==================================================
+    // ACCELERATION
+    // ==================================================
+
+    if (
+        current.acceleration
+    )
+    {
+        const acceleration =
+            current.acceleration;
+
+
+        // ----------------------------------------------
+        // X
+        // ----------------------------------------------
+
+        if (
+            acceleration.x !== undefined &&
+            acceleration.x !== null
+        )
+        {
+            const value =
+                Number(
+                    acceleration.x
+                );
+
+
+            if (
+                Number.isFinite(
+                    value
+                )
+            )
+            {
+                ax.textContent =
+                    value.toFixed(2);
+            }
+        }
+
+
+        // ----------------------------------------------
+        // Y
+        // ----------------------------------------------
+
+        if (
+            acceleration.y !== undefined &&
+            acceleration.y !== null
+        )
+        {
+            const value =
+                Number(
+                    acceleration.y
+                );
+
+
+            if (
+                Number.isFinite(
+                    value
+                )
+            )
+            {
+                ay.textContent =
+                    value.toFixed(2);
+            }
+        }
+
+
+        // ----------------------------------------------
+        // Z
+        // ----------------------------------------------
+
+        if (
+            acceleration.z !== undefined &&
+            acceleration.z !== null
+        )
+        {
+            const value =
+                Number(
+                    acceleration.z
+                );
+
+
+            if (
+                Number.isFinite(
+                    value
+                )
+            )
+            {
+                az.textContent =
+                    value.toFixed(2);
+            }
+        }
+    }
+
+
+    // ==================================================
+    // GYROSCOPE
+    // ==================================================
+
+    if (
+        current.gyroscope
+    )
+    {
+        const gyroscope =
+            current.gyroscope;
+
+
+        // ----------------------------------------------
+        // X
+        // ----------------------------------------------
+
+        if (
+            gyroscope.x !== undefined &&
+            gyroscope.x !== null
+        )
+        {
+            const value =
+                Number(
+                    gyroscope.x
+                );
+
+
+            if (
+                Number.isFinite(
+                    value
+                )
+            )
+            {
+                gx.textContent =
+                    value.toFixed(2);
+            }
+        }
+
+
+        // ----------------------------------------------
+        // Y
+        // ----------------------------------------------
+
+        if (
+            gyroscope.y !== undefined &&
+            gyroscope.y !== null
+        )
+        {
+            const value =
+                Number(
+                    gyroscope.y
+                );
+
+
+            if (
+                Number.isFinite(
+                    value
+                )
+            )
+            {
+                gy.textContent =
+                    value.toFixed(2);
+            }
+        }
+
+
+        // ----------------------------------------------
+        // Z
+        // ----------------------------------------------
+
+        if (
+            gyroscope.z !== undefined &&
+            gyroscope.z !== null
+        )
+        {
+            const value =
+                Number(
+                    gyroscope.z
+                );
+
+
+            if (
+                Number.isFinite(
+                    value
+                )
+            )
+            {
+                gz.textContent =
+                    value.toFixed(2);
+            }
+        }
+    }
+}
+
+
+// ======================================================
 // UPDATE CURRENT GPS
 // ======================================================
 //
@@ -120,6 +411,7 @@ async function getFirebaseData(path)
 // for the latest valid GPS location.
 //
 // This works even when BLE is disconnected.
+//
 // ======================================================
 
 async function updateCurrentGPS()
@@ -149,7 +441,9 @@ async function updateCurrentGPS()
             );
 
 
-        if (Number.isFinite(lat))
+        if (
+            Number.isFinite(lat)
+        )
         {
             latitude.textContent =
                 lat.toFixed(6);
@@ -172,7 +466,9 @@ async function updateCurrentGPS()
             );
 
 
-        if (Number.isFinite(lng))
+        if (
+            Number.isFinite(lng)
+        )
         {
             longitude.textContent =
                 lng.toFixed(6);
@@ -195,7 +491,9 @@ async function updateCurrentGPS()
             );
 
 
-        if (Number.isFinite(alt))
+        if (
+            Number.isFinite(alt)
+        )
         {
             altitude.textContent =
                 alt.toFixed(1);
@@ -230,6 +528,7 @@ async function updateCurrentGPS()
             Number(
                 current.latitude
             );
+
 
         const lng =
             Number(
@@ -276,6 +575,7 @@ async function updateFirebaseStatus()
         firebaseGpsStatus.textContent =
             "UNKNOWN";
 
+
         firebaseGpsStatus.className =
             "gps-searching";
 
@@ -286,6 +586,7 @@ async function updateFirebaseStatus()
 
         locationState.textContent =
             "UNKNOWN";
+
 
         locationState.className =
             "gps-searching";
@@ -351,10 +652,6 @@ async function updateFirebaseStatus()
             "gps-fixed";
 
 
-        // ----------------------------------------------
-        // DEVICE GPS STATUS
-        // ----------------------------------------------
-
         gpsStatus.textContent =
             "AVAILABLE";
     }
@@ -376,10 +673,6 @@ async function updateFirebaseStatus()
         locationState.className =
             "gps-searching";
 
-
-        // ----------------------------------------------
-        // DEVICE GPS STATUS
-        // ----------------------------------------------
 
         gpsStatus.textContent =
             "NO FIX";
@@ -417,6 +710,7 @@ async function updateFirebaseStatus()
 //
 // We only use LOCATION_AVAILABLE entries when
 // determining the last known valid position.
+//
 // ======================================================
 
 async function updateHistory()
@@ -435,7 +729,9 @@ async function updateHistory()
         Object.values(history);
 
 
-    if (entries.length === 0)
+    if (
+        entries.length === 0
+    )
     {
         return;
     }
@@ -457,7 +753,9 @@ async function updateHistory()
         );
 
 
-    if (validLocations.length === 0)
+    if (
+        validLocations.length === 0
+    )
     {
         return;
     }
@@ -505,7 +803,9 @@ async function updateHistory()
         );
 
 
-    if (Number.isFinite(lat))
+    if (
+        Number.isFinite(lat)
+    )
     {
         lastLatitude.textContent =
             lat.toFixed(6);
@@ -522,7 +822,9 @@ async function updateHistory()
         );
 
 
-    if (Number.isFinite(lng))
+    if (
+        Number.isFinite(lng)
+    )
     {
         lastLongitude.textContent =
             lng.toFixed(6);
@@ -544,10 +846,13 @@ async function updateHistory()
             );
 
 
-        if (Number.isFinite(alt))
+        if (
+            Number.isFinite(alt)
+        )
         {
             lastAltitude.textContent =
-                alt.toFixed(1) + " m";
+                alt.toFixed(1) +
+                " m";
         }
     }
 
@@ -564,14 +869,379 @@ async function updateHistory()
 // ======================================================
 // UPDATE FIREBASE DASHBOARD
 // ======================================================
+//
+// Firebase now updates:
+//
+// GPS
+// Motion
+// Battery
+// Acceleration
+// Gyroscope
+// Status
+// History
+//
+// ======================================================
 
 async function updateFirebaseDashboard()
 {
+    // Read current node once for sensors and GPS
+    const current =
+        await getFirebaseData("current");
+
+
+    if (current)
+    {
+        updateCurrentSensorsFromData(
+            current
+        );
+
+        updateCurrentGPSFromData(
+            current
+        );
+    }
+
+
     await updateFirebaseStatus();
 
-    await updateCurrentGPS();
-
     await updateHistory();
+}
+
+
+// ======================================================
+// CURRENT SENSOR DATA FROM ALREADY FETCHED NODE
+// ======================================================
+
+function updateCurrentSensorsFromData(
+    current
+)
+{
+    // ==================================================
+    // MOTION
+    // ==================================================
+
+    if (
+        current.motion !== undefined &&
+        current.motion !== null
+    )
+    {
+        const motion =
+            String(
+                current.motion
+            );
+
+
+        motionText.textContent =
+            motion;
+
+
+        if (
+            motion ===
+            "MOVING"
+        )
+        {
+            motionText.className =
+                "motion moving";
+        }
+
+        else
+        {
+            motionText.className =
+                "motion stationary";
+        }
+    }
+
+
+    // ==================================================
+    // BATTERY
+    // ==================================================
+
+    if (
+        current.battery !== undefined &&
+        current.battery !== null
+    )
+    {
+        const battery =
+            Number(
+                current.battery
+            );
+
+
+        if (
+            Number.isFinite(
+                battery
+            )
+        )
+        {
+            batteryText.textContent =
+                battery;
+        }
+    }
+
+
+    // ==================================================
+    // ACCELERATION
+    // ==================================================
+
+    if (
+        current.acceleration
+    )
+    {
+        const a =
+            current.acceleration;
+
+
+        if (
+            a.x !== undefined
+        )
+        {
+            const value =
+                Number(a.x);
+
+
+            if (
+                Number.isFinite(value)
+            )
+            {
+                ax.textContent =
+                    value.toFixed(2);
+            }
+        }
+
+
+        if (
+            a.y !== undefined
+        )
+        {
+            const value =
+                Number(a.y);
+
+
+            if (
+                Number.isFinite(value)
+            )
+            {
+                ay.textContent =
+                    value.toFixed(2);
+            }
+        }
+
+
+        if (
+            a.z !== undefined
+        )
+        {
+            const value =
+                Number(a.z);
+
+
+            if (
+                Number.isFinite(value)
+            )
+            {
+                az.textContent =
+                    value.toFixed(2);
+            }
+        }
+    }
+
+
+    // ==================================================
+    // GYROSCOPE
+    // ==================================================
+
+    if (
+        current.gyroscope
+    )
+    {
+        const g =
+            current.gyroscope;
+
+
+        if (
+            g.x !== undefined
+        )
+        {
+            const value =
+                Number(g.x);
+
+
+            if (
+                Number.isFinite(value)
+            )
+            {
+                gx.textContent =
+                    value.toFixed(2);
+            }
+        }
+
+
+        if (
+            g.y !== undefined
+        )
+        {
+            const value =
+                Number(g.y);
+
+
+            if (
+                Number.isFinite(value)
+            )
+            {
+                gy.textContent =
+                    value.toFixed(2);
+            }
+        }
+
+
+        if (
+            g.z !== undefined
+        )
+        {
+            const value =
+                Number(g.z);
+
+
+            if (
+                Number.isFinite(value)
+            )
+            {
+                gz.textContent =
+                    value.toFixed(2);
+            }
+        }
+    }
+}
+
+
+// ======================================================
+// CURRENT GPS FROM ALREADY FETCHED NODE
+// ======================================================
+
+function updateCurrentGPSFromData(
+    current
+)
+{
+    // ==================================================
+    // LATITUDE
+    // ==================================================
+
+    if (
+        current.latitude !== undefined &&
+        current.latitude !== null
+    )
+    {
+        const lat =
+            Number(
+                current.latitude
+            );
+
+
+        if (
+            Number.isFinite(lat)
+        )
+        {
+            latitude.textContent =
+                lat.toFixed(6);
+        }
+    }
+
+
+    // ==================================================
+    // LONGITUDE
+    // ==================================================
+
+    if (
+        current.longitude !== undefined &&
+        current.longitude !== null
+    )
+    {
+        const lng =
+            Number(
+                current.longitude
+            );
+
+
+        if (
+            Number.isFinite(lng)
+        )
+        {
+            longitude.textContent =
+                lng.toFixed(6);
+        }
+    }
+
+
+    // ==================================================
+    // ALTITUDE
+    // ==================================================
+
+    if (
+        current.altitude !== undefined &&
+        current.altitude !== null
+    )
+    {
+        const alt =
+            Number(
+                current.altitude
+            );
+
+
+        if (
+            Number.isFinite(alt)
+        )
+        {
+            altitude.textContent =
+                alt.toFixed(1);
+        }
+    }
+
+
+    // ==================================================
+    // GPS TIME
+    // ==================================================
+
+    if (
+        current.gpsTime !== undefined &&
+        current.gpsTime !== null
+    )
+    {
+        gpsTime.textContent =
+            current.gpsTime;
+    }
+
+
+    // ==================================================
+    // MAP
+    // ==================================================
+
+    if (
+        current.latitude !== undefined &&
+        current.longitude !== undefined
+    )
+    {
+        const lat =
+            Number(
+                current.latitude
+            );
+
+
+        const lng =
+            Number(
+                current.longitude
+            );
+
+
+        if (
+            Number.isFinite(lat) &&
+            Number.isFinite(lng)
+        )
+        {
+            updateTrackerMap(
+                lat,
+                lng
+            );
+        }
+    }
 }
 
 
@@ -579,11 +1249,8 @@ async function updateFirebaseDashboard()
 // BLE STATUS
 // ======================================================
 //
-// BLE status is completely separate from GPS status.
+// BLE status is completely independent from Firebase.
 //
-// BLE disconnected does NOT mean GPS disconnected.
-//
-// Firebase GPS can continue working while BLE is OFF.
 // ======================================================
 
 function updateBLEStatus()
@@ -597,6 +1264,7 @@ function updateBLEStatus()
         bleStatus.textContent =
             "Connected";
 
+
         bleStatus.className =
             "gps-fixed";
     }
@@ -605,6 +1273,7 @@ function updateBLEStatus()
     {
         bleStatus.textContent =
             "Disconnected";
+
 
         bleStatus.className =
             "gps-searching";
@@ -625,10 +1294,11 @@ updateFirebaseDashboard();
 //
 // Refresh Firebase every 3 seconds.
 //
-// This means:
+// BLE ON:
+//     BLE provides immediate sensor updates.
 //
-// BLE ON  -> Firebase GPS works
-// BLE OFF -> Firebase GPS still works
+// BLE OFF:
+//     Firebase provides sensor updates.
 //
 // ======================================================
 

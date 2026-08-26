@@ -112,7 +112,8 @@ async function connect()
                 filters:
                 [
                     {
-                        name: "Smart Tracker"
+                        name:
+                            "Smart Tracker"
                     }
                 ],
 
@@ -131,8 +132,8 @@ async function connect()
 
         setupDisconnectListener();
 
-        await connectToDevice();
 
+        await connectToDevice();
     }
 
     catch(error)
@@ -173,7 +174,8 @@ async function autoConnect()
         const tracker =
             devices.find(
                 item =>
-                    item.name === "Smart Tracker"
+                    item.name ===
+                    "Smart Tracker"
             );
 
 
@@ -187,12 +189,14 @@ async function autoConnect()
         }
 
 
-        device = tracker;
+        device =
+            tracker;
+
 
         setupDisconnectListener();
 
-        await connectToDevice();
 
+        await connectToDevice();
     }
 
     catch(error)
@@ -296,10 +300,12 @@ async function connectToDevice()
                 ACCEL_X_UUID
             );
 
+
         accelYChar =
             await service.getCharacteristic(
                 ACCEL_Y_UUID
             );
+
 
         accelZChar =
             await service.getCharacteristic(
@@ -316,10 +322,12 @@ async function connectToDevice()
                 GYRO_X_UUID
             );
 
+
         gyroYChar =
             await service.getCharacteristic(
                 GYRO_Y_UUID
             );
+
 
         gyroZChar =
             await service.getCharacteristic(
@@ -356,20 +364,24 @@ async function connectToDevice()
                 GPS_LATITUDE_UUID
             );
 
+
         gpsLongitudeChar =
             await service.getCharacteristic(
                 GPS_LONGITUDE_UUID
             );
+
 
         gpsAltitudeChar =
             await service.getCharacteristic(
                 GPS_ALTITUDE_UUID
             );
 
+
         gpsTimeChar =
             await service.getCharacteristic(
                 GPS_TIME_UUID
             );
+
 
         gpsStatusChar =
             await service.getCharacteristic(
@@ -503,8 +515,10 @@ async function connectToDevice()
                 const value =
                     decode(event);
 
+
                 latitude.textContent =
                     value;
+
 
                 updateMap();
             }
@@ -522,8 +536,10 @@ async function connectToDevice()
                 const value =
                     decode(event);
 
+
                 longitude.textContent =
                     value;
+
 
                 updateMap();
             }
@@ -594,7 +610,9 @@ async function connectToDevice()
 
 
         updateGPSStatus(
-            decodeValue(gpsStatusValue)
+            decodeValue(
+                gpsStatusValue
+            )
         );
 
 
@@ -608,7 +626,6 @@ async function connectToDevice()
         console.log(
             "Smart Tracker fully connected."
         );
-
     }
 
     catch(error)
@@ -630,6 +647,7 @@ function setConnectedUI()
     statusText.textContent =
         "Connected";
 
+
     statusText.className =
         "status connected";
 
@@ -639,6 +657,7 @@ function setConnectedUI()
         bleStatus.textContent =
             "Connected";
 
+
         bleStatus.className =
             "gps-fixed";
     }
@@ -646,6 +665,7 @@ function setConnectedUI()
 
     connectBtn.disabled =
         true;
+
 
     connectBtn.textContent =
         "Connected";
@@ -669,7 +689,10 @@ function updateGPSStatus(value)
         value;
 
 
-    if (value === "FIXED")
+    if (
+        value ===
+        "FIXED"
+    )
     {
         gpsStatus.className =
             "gps-fixed";
@@ -693,6 +716,7 @@ function updateMap()
         Number(
             latitude.textContent
         );
+
 
     const lng =
         Number(
@@ -747,7 +771,10 @@ function handleMotion(event)
         value;
 
 
-    if (value === "MOVING")
+    if (
+        value ===
+        "MOVING"
+    )
     {
         motionText.className =
             "motion moving";
@@ -838,6 +865,7 @@ function onDisconnected()
     statusText.textContent =
         "Disconnected";
 
+
     statusText.className =
         "status";
 
@@ -847,6 +875,7 @@ function onDisconnected()
         bleStatus.textContent =
             "Disconnected";
 
+
         bleStatus.className =
             "gps-searching";
     }
@@ -855,60 +884,41 @@ function onDisconnected()
     connectBtn.disabled =
         false;
 
+
     connectBtn.textContent =
         "Connect Device";
 
 
     // ==================================================
-    // SENSOR VALUES
+    // IMPORTANT
     // ==================================================
-
-    motionText.textContent =
-        "--";
-
-    motionText.className =
-        "motion";
-
-
-    batteryText.textContent =
-        "--";
-
-
-    ax.textContent =
-        "0.00";
-
-    ay.textContent =
-        "0.00";
-
-    az.textContent =
-        "0.00";
-
-
-    gx.textContent =
-        "0.00";
-
-    gy.textContent =
-        "0.00";
-
-    gz.textContent =
-        "0.00";
+    //
+    // DO NOT CLEAR:
+    //
+    // - Motion
+    // - Battery
+    // - Acceleration
+    // - Gyroscope
+    //
+    // Firebase /current will continue supplying
+    // these values every 3 seconds.
+    //
+    // ==================================================
 
 
     // ==================================================
     // DEVICE GPS
     // ==================================================
     //
-    // IMPORTANT:
-    // Firebase current GPS is NOT BLE GPS.
+    // BLE GPS is no longer available.
     //
-    // When BLE disconnects, clear the Device GPS
-    // because the tracker is no longer connected.
+    // Firebase GPS is handled separately by app.js.
     //
-    // Last Known Location remains untouched.
     // ==================================================
 
     gpsStatus.textContent =
         "DISCONNECTED";
+
 
     gpsStatus.className =
         "gps-searching";
@@ -917,11 +927,14 @@ function onDisconnected()
     latitude.textContent =
         "-";
 
+
     longitude.textContent =
         "-";
 
+
     altitude.textContent =
         "-";
+
 
     gpsTime.textContent =
         "-";
@@ -935,6 +948,7 @@ function onDisconnected()
     {
         ledBtn.disabled =
             true;
+
 
         ledBtn.textContent =
             "Turn ON Sound";
@@ -952,47 +966,62 @@ function onDisconnected()
     server =
         null;
 
+
     service =
         null;
+
 
     motionChar =
         null;
 
+
     accelXChar =
         null;
+
 
     accelYChar =
         null;
 
+
     accelZChar =
         null;
+
 
     gyroXChar =
         null;
 
+
     gyroYChar =
         null;
+
 
     gyroZChar =
         null;
 
+
     batteryChar =
         null;
+
 
     ledChar =
         null;
 
+
     gpsLatitudeChar =
         null;
+
 
     gpsLongitudeChar =
         null;
 
+
     gpsAltitudeChar =
         null;
 
+
     gpsTimeChar =
         null;
+
 
     gpsStatusChar =
         null;

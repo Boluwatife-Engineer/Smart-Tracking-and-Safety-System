@@ -1,6 +1,6 @@
 #include "gsm.h"
 #include "sim7600.h"
-
+#include "storage.h"
 #include "mpu6050.h"
 #include "battery.h"
 #include "tracker_state.h"
@@ -28,6 +28,15 @@ const char *statusURL =
 
 
 // ======================================================
+// OFFLINE QUEUE CONTROL
+// ======================================================
+
+unsigned long lastOfflineSync = 0;
+
+const unsigned long OFFLINE_SYNC_INTERVAL = 10000;
+
+
+// ======================================================
 // INITIALIZE GSM
 // ======================================================
 
@@ -35,6 +44,13 @@ void initGSM()
 {
     Serial.println();
     Serial.println("========== GSM INITIALIZATION ==========");
+
+
+    // ==================================================
+    // STORAGE
+    // ==================================================
+
+    initStorage();
 
 
     // ==================================================
@@ -68,7 +84,7 @@ void initGSM()
 
 
     // ==================================================
-    // PACKET DOMAIN ATTACHMENT
+    // PACKET DOMAIN
     // ==================================================
 
     sendSIM7600Command(
@@ -88,7 +104,7 @@ void initGSM()
 
 
     // ==================================================
-    // ACTIVATE PDP CONTEXT
+    // ACTIVATE PDP
     // ==================================================
 
     sendSIM7600Command(
@@ -98,7 +114,7 @@ void initGSM()
 
 
     // ==================================================
-    // GET IP ADDRESS
+    // GET IP
     // ==================================================
 
     sendSIM7600Command(
@@ -108,34 +124,26 @@ void initGSM()
 
 
     // ==================================================
-    // SSL CONFIGURATION
+    // SSL
     // ==================================================
 
     Serial.println();
     Serial.println("========== SSL CONFIGURATION ==========");
-
 
     sendSIM7600Command(
         "AT+CSSLCFG=\"sslversion\",0,4",
         2000
     );
 
-
     sendSIM7600Command(
         "AT+CSSLCFG=\"ignorelocaltime\",0,1",
         2000
     );
 
-
     sendSIM7600Command(
         "AT+CSSLCFG=\"seclevel\",0,0",
         2000
     );
-
-
-    // ==================================================
-    // CHECK SSL
-    // ==================================================
 
     sendSIM7600Command(
         "AT+CSSLCFG?",
@@ -149,11 +157,16 @@ void initGSM()
 
     gsmReady = true;
 
-
     Serial.println();
-    Serial.println(
-        "GSM initialization complete."
-    );
+    Serial.println("GSM initialization complete.");
+
+
+    // ==================================================
+    // OFFLINE QUEUE
+    // ==================================================
+
+    Serial.print("Offline records waiting: ");
+    Serial.println(getOfflineRecordCount());
 
     Serial.println();
 }
@@ -182,40 +195,185 @@ bool waitForResponse(
 
     unsigned long start = millis();
 
-
-    while (
-        millis() - start < timeout
-    )
+    while (millis() - start < timeout)
     {
-        while (
-            sim7600.available()
-        )
+        while (sim7600.available())
         {
-            char c =
-                (char)sim7600.read();
-
+            char c = (char)sim7600.read();
 
             response += c;
 
+            Serial.write(c);
 
-            Serial.write(
-                c
-            );
-
-
-            if (
-                response.indexOf(
-                    expected
-                ) != -1
-            )
+            if (response.indexOf(expected) != -1)
             {
                 return true;
             }
         }
     }
 
-
     return false;
+}
+
+
+// ======================================================
+// CHECK NETWORK
+// ======================================================
+
+bool hasNetworkConnection()
+{
+    if (!gsmReady)
+    {
+        return false;
+    }
+
+
+    // ==================================================
+    // CLEAR UART
+    // ==================================================
+
+    while (sim7600.available())
+    {
+        sim7600.read();
+    }
+
+
+    // ==================================================
+    // CEREG
+    // ==================================================
+
+    sim7600.println("AT+CEREG?");
+
+    String cereg = "";
+
+    unsigned long start = millis();
+
+    while (millis() - start < 2000)
+    {
+        while (sim7600.available())
+        {
+            char c = (char)sim7600.read();
+
+            cereg += c;
+        }
+
+        if (cereg.indexOf("OK") != -1)
+        {
+            break;
+        }
+    }
+
+
+    Serial.print("CEREG: ");
+    Serial.println(cereg);
+
+
+    bool registered =
+        cereg.indexOf("+CEREG: 0,1") != -1 ||
+        cereg.indexOf("+CEREG: 0,5") != -1 ||
+        cereg.indexOf("+CEREG: 1,1") != -1 ||
+        cereg.indexOf("+CEREG: 1,5") != -1 ||
+        cereg.indexOf("+CEREG: 2,1") != -1 ||
+        cereg.indexOf("+CEREG: 2,5") != -1;
+
+
+    if (!registered)
+    {
+        Serial.println("Network NOT registered.");
+
+        return false;
+    }
+
+
+    // ==================================================
+    // CGATT
+    // ==================================================
+
+    while (sim7600.available())
+    {
+        sim7600.read();
+    }
+
+    sim7600.println("AT+CGATT?");
+
+    String cgatt = "";
+
+    start = millis();
+
+    while (millis() - start < 2000)
+    {
+        while (sim7600.available())
+        {
+            char c = (char)sim7600.read();
+
+            cgatt += c;
+        }
+
+        if (cgatt.indexOf("OK") != -1)
+        {
+            break;
+        }
+    }
+
+
+    Serial.print("CGATT: ");
+    Serial.println(cgatt);
+
+
+    if (cgatt.indexOf("+CGATT: 1") == -1)
+    {
+        Serial.println("Packet domain NOT attached.");
+
+        return false;
+    }
+
+
+    // ==================================================
+    // CGACT
+    // ==================================================
+
+    while (sim7600.available())
+    {
+        sim7600.read();
+    }
+
+    sim7600.println("AT+CGACT?");
+
+    String cgact = "";
+
+    start = millis();
+
+    while (millis() - start < 2000)
+    {
+        while (sim7600.available())
+        {
+            char c = (char)sim7600.read();
+
+            cgact += c;
+        }
+
+        if (cgact.indexOf("OK") != -1)
+        {
+            break;
+        }
+    }
+
+
+    Serial.print("CGACT: ");
+    Serial.println(cgact);
+
+
+    if (cgact.indexOf("+CGACT: 1,1") == -1)
+    {
+        Serial.println("PDP context is NOT active.");
+
+        return false;
+    }
+
+
+    Serial.println("NETWORK AVAILABLE.");
+
+    return true;
 }
 
 
@@ -228,21 +386,6 @@ bool waitForResponse(
 // 1 = POST
 // 2 = PUT
 //
-// SIM7600 HTTPACTION:
-//
-// 0 = GET
-// 1 = POST
-// 2 = HEAD
-// 3 = DELETE
-//
-// Therefore logical PUT is implemented using:
-//
-// POST
-//
-// with:
-//
-// X-HTTP-Method-Override: PUT
-//
 // ======================================================
 
 bool sendFirebaseRequest(
@@ -253,67 +396,34 @@ bool sendFirebaseRequest(
 {
     if (!gsmReady)
     {
-        Serial.println(
-            "GSM is not ready."
-        );
+        Serial.println("GSM is not ready.");
 
         return false;
     }
 
 
-    // ==================================================
-    // DISPLAY REQUEST
-    // ==================================================
-
     Serial.println();
-    Serial.println(
-        "================================"
-    );
-
-    Serial.println(
-        "FIREBASE REQUEST"
-    );
-
-    Serial.println(
-        "================================"
-    );
+    Serial.println("================================");
+    Serial.println("FIREBASE REQUEST");
+    Serial.println("================================");
 
 
-    Serial.print(
-        "URL: "
-    );
-
-    Serial.println(
-        url
-    );
+    Serial.print("URL: ");
+    Serial.println(url);
 
 
-    Serial.print(
-        "Payload: "
-    );
-
-    Serial.println(
-        payload
-    );
+    Serial.print("Payload: ");
+    Serial.println(payload);
 
 
-    if (
-        method == 1
-    )
+    if (method == 1)
     {
-        Serial.println(
-            "Method: POST"
-        );
+        Serial.println("Method: POST");
     }
     else
     {
-        Serial.println(
-            "Method: PUT"
-        );
-
-        Serial.println(
-            "Transport: POST + X-HTTP-Method-Override"
-        );
+        Serial.println("Method: PUT");
+        Serial.println("Transport: POST + X-HTTP-Method-Override");
     }
 
 
@@ -321,32 +431,24 @@ bool sendFirebaseRequest(
     // CLEAR UART
     // ==================================================
 
-    while (
-        sim7600.available()
-    )
+    while (sim7600.available())
     {
         sim7600.read();
     }
 
 
     // ==================================================
-    // TERMINATE PREVIOUS HTTP SESSION
+    // TERMINATE PREVIOUS SESSION
     // ==================================================
 
-    sim7600.println(
-        "AT+HTTPTERM"
-    );
+    sim7600.println("AT+HTTPTERM");
 
     delay(500);
 
 
-    while (
-        sim7600.available()
-    )
+    while (sim7600.available())
     {
-        Serial.write(
-            sim7600.read()
-        );
+        Serial.write(sim7600.read());
     }
 
 
@@ -354,21 +456,11 @@ bool sendFirebaseRequest(
     // HTTP INIT
     // ==================================================
 
-    sim7600.println(
-        "AT+HTTPINIT"
-    );
+    sim7600.println("AT+HTTPINIT");
 
-
-    if (
-        !waitForResponse(
-            "OK",
-            3000
-        )
-    )
+    if (!waitForResponse("OK", 3000))
     {
-        Serial.println(
-            "ERROR: HTTPINIT failed."
-        );
+        Serial.println("ERROR: HTTPINIT failed.");
 
         return false;
     }
@@ -378,27 +470,13 @@ bool sendFirebaseRequest(
     // CID
     // ==================================================
 
-    sim7600.println(
-        "AT+HTTPPARA=\"CID\",1"
-    );
+    sim7600.println("AT+HTTPPARA=\"CID\",1");
 
-
-    if (
-        !waitForResponse(
-            "OK",
-            3000
-        )
-    )
+    if (!waitForResponse("OK", 3000))
     {
-        Serial.println(
-            "ERROR: CID failed."
-        );
+        Serial.println("ERROR: CID failed.");
 
-
-        sim7600.println(
-            "AT+HTTPTERM"
-        );
-
+        sim7600.println("AT+HTTPTERM");
 
         return false;
     }
@@ -408,39 +486,18 @@ bool sendFirebaseRequest(
     // URL
     // ==================================================
 
-    String urlCommand =
-        "AT+HTTPPARA=\"URL\",\"";
+    String urlCommand = "AT+HTTPPARA=\"URL\",\"";
 
+    urlCommand += url;
+    urlCommand += "\"";
 
-    urlCommand +=
-        String(url);
+    sim7600.println(urlCommand);
 
-
-    urlCommand +=
-        "\"";
-
-
-    sim7600.println(
-        urlCommand
-    );
-
-
-    if (
-        !waitForResponse(
-            "OK",
-            5000
-        )
-    )
+    if (!waitForResponse("OK", 5000))
     {
-        Serial.println(
-            "ERROR: URL setup failed."
-        );
+        Serial.println("ERROR: URL setup failed.");
 
-
-        sim7600.println(
-            "AT+HTTPTERM"
-        );
-
+        sim7600.println("AT+HTTPTERM");
 
         return false;
     }
@@ -454,23 +511,11 @@ bool sendFirebaseRequest(
         "AT+HTTPPARA=\"CONTENT\",\"application/json\""
     );
 
-
-    if (
-        !waitForResponse(
-            "OK",
-            3000
-        )
-    )
+    if (!waitForResponse("OK", 3000))
     {
-        Serial.println(
-            "ERROR: Content type failed."
-        );
+        Serial.println("ERROR: Content type failed.");
 
-
-        sim7600.println(
-            "AT+HTTPTERM"
-        );
-
+        sim7600.println("AT+HTTPTERM");
 
         return false;
     }
@@ -480,36 +525,17 @@ bool sendFirebaseRequest(
     // PUT OVERRIDE
     // ==================================================
 
-    if (
-        method == 2
-    )
+    if (method == 2)
     {
-        Serial.println(
-            "Setting HTTP PUT override header..."
-        );
-
-
         sim7600.println(
             "AT+HTTPPARA=\"USERDATA\",\"X-HTTP-Method-Override: PUT\""
         );
 
-
-        if (
-            !waitForResponse(
-                "OK",
-                3000
-            )
-        )
+        if (!waitForResponse("OK", 3000))
         {
-            Serial.println(
-                "ERROR: PUT override header failed."
-            );
+            Serial.println("ERROR: PUT override failed.");
 
-
-            sim7600.println(
-                "AT+HTTPTERM"
-            );
-
+            sim7600.println("AT+HTTPTERM");
 
             return false;
         }
@@ -517,69 +543,21 @@ bool sendFirebaseRequest(
 
 
     // ==================================================
-    // CLEAR UART
-    // ==================================================
-
-    while (
-        sim7600.available()
-    )
-    {
-        sim7600.read();
-    }
-
-
-    // ==================================================
     // HTTP DATA
     // ==================================================
 
-    String httpDataCommand =
-        "AT+HTTPDATA=";
+    String httpDataCommand = "AT+HTTPDATA=";
 
+    httpDataCommand += payload.length();
+    httpDataCommand += ",15000";
 
-    httpDataCommand +=
-        String(
-            payload.length()
-        );
+    sim7600.println(httpDataCommand);
 
-
-    httpDataCommand +=
-        ",15000";
-
-
-    Serial.print(
-        ">> "
-    );
-
-    Serial.println(
-        httpDataCommand
-    );
-
-
-    sim7600.println(
-        httpDataCommand
-    );
-
-
-    // ==================================================
-    // WAIT DOWNLOAD
-    // ==================================================
-
-    if (
-        !waitForResponse(
-            "DOWNLOAD",
-            5000
-        )
-    )
+    if (!waitForResponse("DOWNLOAD", 5000))
     {
-        Serial.println(
-            "ERROR: DOWNLOAD prompt not received."
-        );
+        Serial.println("ERROR: DOWNLOAD prompt not received.");
 
-
-        sim7600.println(
-            "AT+HTTPTERM"
-        );
-
+        sim7600.println("AT+HTTPTERM");
 
         return false;
     }
@@ -589,60 +567,15 @@ bool sendFirebaseRequest(
     // SEND JSON
     // ==================================================
 
-    Serial.println(
-        "Sending Firebase JSON..."
-    );
+    sim7600.print(payload);
 
-
-    Serial.println(
-        payload
-    );
-
-
-    sim7600.print(
-        payload
-    );
-
-
-    // ==================================================
-    // WAIT PAYLOAD ACCEPTANCE
-    // ==================================================
-
-    if (
-        !waitForResponse(
-            "OK",
-            15000
-        )
-    )
+    if (!waitForResponse("OK", 15000))
     {
-        Serial.println(
-            "ERROR: Firebase payload was not accepted."
-        );
+        Serial.println("ERROR: Payload rejected.");
 
-
-        sim7600.println(
-            "AT+HTTPTERM"
-        );
-
+        sim7600.println("AT+HTTPTERM");
 
         return false;
-    }
-
-
-    Serial.println(
-        "Firebase payload accepted."
-    );
-
-
-    // ==================================================
-    // CLEAR UART
-    // ==================================================
-
-    while (
-        sim7600.available()
-    )
-    {
-        sim7600.read();
     }
 
 
@@ -650,147 +583,62 @@ bool sendFirebaseRequest(
     // HTTP ACTION
     // ==================================================
 
-    if (
-        method == 1
-    )
-    {
-        Serial.println(
-            "Sending HTTP POST..."
-        );
-    }
-    else
-    {
-        Serial.println(
-            "Sending HTTP PUT via POST override..."
-        );
-    }
-
-
-    sim7600.println(
-        "AT+HTTPACTION=1"
-    );
-
-
-    // ==================================================
-    // WAIT HTTP ACTION
-    // ==================================================
+    sim7600.println("AT+HTTPACTION=1");
 
     String response = "";
 
-    unsigned long start =
-        millis();
+    unsigned long start = millis();
 
-
-    while (
-        millis() - start < 30000
-    )
+    while (millis() - start < 30000)
     {
-        while (
-            sim7600.available()
-        )
+        while (sim7600.available())
         {
-            char c =
-                (char)sim7600.read();
-
+            char c = (char)sim7600.read();
 
             response += c;
 
-
-            Serial.write(
-                c
-            );
+            Serial.write(c);
         }
 
-
-        if (
-            response.indexOf(
-                "+HTTPACTION:"
-            ) != -1
-        )
+        if (response.indexOf("+HTTPACTION:") != -1)
         {
             break;
         }
     }
 
 
-    // ==================================================
-    // DISPLAY RESPONSE
-    // ==================================================
-
     Serial.println();
-
-    Serial.println(
-        "HTTP ACTION RESPONSE:"
-    );
-
-    Serial.println(
-        response
-    );
+    Serial.println("HTTP ACTION RESPONSE:");
+    Serial.println(response);
 
 
     // ==================================================
-    // PARSE RESULT
+    // PARSE HTTP CODE
     // ==================================================
 
     bool success = false;
 
-
     int actionIndex =
-        response.indexOf(
-            "+HTTPACTION:"
-        );
+        response.indexOf("+HTTPACTION:");
 
 
-    if (
-        actionIndex != -1
-    )
+    if (actionIndex != -1)
     {
         String action =
-            response.substring(
-                actionIndex
-            );
+            response.substring(actionIndex);
 
 
-        Serial.print(
-            "Parsed HTTP ACTION: "
-        );
-
-        Serial.println(
-            action
-        );
-
-
-        // HTTP 200
-
-        if (
-            action.indexOf(
-                ",200,"
-            ) != -1
-        )
+        if (action.indexOf(",200,") != -1)
         {
             success = true;
         }
 
-
-        // HTTP 201
-
-        if (
-            action.indexOf(
-                ",201,"
-            ) != -1
-        )
+        if (action.indexOf(",201,") != -1)
         {
             success = true;
         }
 
-
-        // HTTP 204
-
-        if (
-            action.indexOf(
-                ",204,"
-            ) != -1
-        )
+        if (action.indexOf(",204,") != -1)
         {
             success = true;
         }
@@ -798,48 +646,25 @@ bool sendFirebaseRequest(
 
 
     // ==================================================
-    // RESULT
+    // READ RESPONSE
     // ==================================================
 
-    if (
-        success
-    )
+    if (success)
     {
-        Serial.println();
+        Serial.println("FIREBASE REQUEST SUCCESS.");
 
-        Serial.println(
-            "FIREBASE REQUEST SUCCESS."
-        );
-
-
-        // ==================================================
-        // READ FIREBASE RESPONSE
-        // ==================================================
-
-        sim7600.println(
-            "AT+HTTPREAD"
-        );
-
+        sim7600.println("AT+HTTPREAD");
 
         delay(1000);
 
-
-        while (
-            sim7600.available()
-        )
+        while (sim7600.available())
         {
-            Serial.write(
-                sim7600.read()
-            );
+            Serial.write(sim7600.read());
         }
     }
     else
     {
-        Serial.println();
-
-        Serial.println(
-            "FIREBASE REQUEST FAILED."
-        );
+        Serial.println("FIREBASE REQUEST FAILED.");
     }
 
 
@@ -847,28 +672,17 @@ bool sendFirebaseRequest(
     // CLOSE HTTP
     // ==================================================
 
-    sim7600.println(
-        "AT+HTTPTERM"
-    );
-
+    sim7600.println("AT+HTTPTERM");
 
     delay(500);
 
-
-    while (
-        sim7600.available()
-    )
+    while (sim7600.available())
     {
-        Serial.write(
-            sim7600.read()
-        );
+        Serial.write(sim7600.read());
     }
 
 
-    Serial.println(
-        "================================"
-    );
-
+    Serial.println("================================");
 
     return success;
 }
@@ -893,73 +707,38 @@ String buildTimestamp(
 
 
     String day =
-        gpsDate.substring(
-            0,
-            2
-        );
-
+        gpsDate.substring(0, 2);
 
     String month =
-        gpsDate.substring(
-            2,
-            4
-        );
-
+        gpsDate.substring(2, 4);
 
     String year =
-        gpsDate.substring(
-            4,
-            6
-        );
+        gpsDate.substring(4, 6);
 
 
     String hour =
-        gpsTime.substring(
-            0,
-            2
-        );
-
+        gpsTime.substring(0, 2);
 
     String minute =
-        gpsTime.substring(
-            2,
-            4
-        );
-
+        gpsTime.substring(2, 4);
 
     String second =
-        gpsTime.substring(
-            4,
-            6
-        );
+        gpsTime.substring(4, 6);
 
 
-    String timestamp =
-        "20";
-
+    String timestamp = "20";
 
     timestamp += year;
-
     timestamp += "-";
-
     timestamp += month;
-
     timestamp += "-";
-
     timestamp += day;
-
     timestamp += "T";
-
     timestamp += hour;
-
     timestamp += ":";
-
     timestamp += minute;
-
     timestamp += ":";
-
     timestamp += second;
-
     timestamp += "Z";
 
 
@@ -968,17 +747,216 @@ String buildTimestamp(
 
 
 // ======================================================
-// SEND LOCATION + TRACKER STATE
+// SAVE HISTORY OR QUEUE OFFLINE
 // ======================================================
-//
-// gpsAvailable:
-//
-// true
-//  -> GPS + sensors
-//
-// false
-//  -> sensors only
-//
+
+bool saveHistoryOrQueue(
+    const String &payload
+)
+{
+    // ==================================================
+    // NETWORK CHECK
+    // ==================================================
+
+    if (!hasNetworkConnection())
+    {
+        Serial.println();
+        Serial.println("NO INTERNET / NETWORK.");
+        Serial.println("Saving history record locally.");
+
+        return saveOfflineRecord(payload);
+    }
+
+
+    // ==================================================
+    // TRY LIVE UPLOAD
+    // ==================================================
+
+    bool success =
+        sendFirebaseRequest(
+            historyURL,
+            payload,
+            1
+        );
+
+
+    if (success)
+    {
+        Serial.println("History uploaded successfully.");
+
+        return true;
+    }
+
+
+    // ==================================================
+    // UPLOAD FAILED
+    // ==================================================
+
+    Serial.println();
+    Serial.println("History upload failed.");
+    Serial.println("Saving record to offline queue.");
+
+
+    return saveOfflineRecord(payload);
+}
+
+
+// ======================================================
+// SYNC OFFLINE HISTORY
+// ======================================================
+
+void syncOfflineHistory()
+{
+    int count =
+        getOfflineRecordCount();
+
+
+    if (count <= 0)
+    {
+        return;
+    }
+
+
+    Serial.println();
+    Serial.println("================================");
+    Serial.println("OFFLINE HISTORY SYNC");
+    Serial.println("================================");
+
+
+    Serial.print("Records waiting: ");
+    Serial.println(count);
+
+
+    // ==================================================
+    // CHECK NETWORK
+    // ==================================================
+
+    if (!hasNetworkConnection())
+    {
+        Serial.println("Network still unavailable.");
+
+        return;
+    }
+
+
+    // ==================================================
+    // UPLOAD FROM OLDEST TO NEWEST
+    // ==================================================
+
+    int uploaded = 0;
+
+
+    while (getOfflineRecordCount() > 0)
+    {
+        String payload =
+            getOfflineRecord(0);
+
+
+        if (payload.length() == 0)
+        {
+            Serial.println("Invalid offline record.");
+
+            deleteOfflineRecord(0);
+
+            continue;
+        }
+
+
+        Serial.println();
+        Serial.println("Uploading offline record...");
+
+
+        bool success =
+            sendFirebaseRequest(
+                historyURL,
+                payload,
+                1
+            );
+
+
+        if (!success)
+        {
+            Serial.println("Offline upload failed.");
+            Serial.println("Stopping sync. Record retained.");
+
+            break;
+        }
+
+
+        // ==================================================
+        // DELETE ONLY AFTER SUCCESS
+        // ==================================================
+
+        deleteOfflineRecord(0);
+
+        uploaded++;
+
+
+        Serial.print(
+            "Offline record uploaded. Remaining: "
+        );
+
+        Serial.println(
+            getOfflineRecordCount()
+        );
+
+
+        delay(500);
+    }
+
+
+    Serial.println();
+
+    Serial.print(
+        "Offline records uploaded: "
+    );
+
+    Serial.println(uploaded);
+
+
+    Serial.print(
+        "Offline records remaining: "
+    );
+
+    Serial.println(
+        getOfflineRecordCount()
+    );
+
+
+    Serial.println("================================");
+}
+
+
+// ======================================================
+// GSM LOOP
+// ======================================================
+
+void gsmLoop()
+{
+    if (
+        millis() - lastOfflineSync <
+        OFFLINE_SYNC_INTERVAL
+    )
+    {
+        return;
+    }
+
+
+    lastOfflineSync =
+        millis();
+
+
+    if (
+        getOfflineRecordCount() > 0
+    )
+    {
+        syncOfflineHistory();
+    }
+}
+
+
+// ======================================================
+// SEND LOCATION
 // ======================================================
 
 bool sendLocation(
@@ -992,12 +970,17 @@ bool sendLocation(
 {
     if (!gsmReady)
     {
-        Serial.println(
-            "GSM is not ready."
-        );
+        Serial.println("GSM is not ready.");
 
         return false;
     }
+
+
+    // ==================================================
+    // FIRST: SYNC OLD DATA
+    // ==================================================
+
+    syncOfflineHistory();
 
 
     // ==================================================
@@ -1070,400 +1053,127 @@ bool sendLocation(
 
 
     // ==================================================
-    // DISPLAY
-    // ==================================================
-
-    Serial.println();
-    Serial.println(
-        "================================"
-    );
-
-    Serial.println(
-        "TRACKER STATE"
-    );
-
-    Serial.println(
-        "================================"
-    );
-
-
-    Serial.print(
-        "GPS: "
-    );
-
-    Serial.println(
-        gpsAvailable
-            ? "AVAILABLE"
-            : "NOT AVAILABLE"
-    );
-
-
-    Serial.print(
-        "Motion: "
-    );
-
-    Serial.println(
-        motion
-    );
-
-
-    Serial.print(
-        "Tracker Mode: "
-    );
-
-    Serial.println(
-        trackerMode
-    );
-
-
-    Serial.print(
-        "Battery: "
-    );
-
-    Serial.print(
-        battery
-    );
-
-    Serial.println(
-        "%"
-    );
-
-
-    Serial.print(
-        "Accel X: "
-    );
-
-    Serial.println(
-        accelX,
-        2
-    );
-
-
-    Serial.print(
-        "Accel Y: "
-    );
-
-    Serial.println(
-        accelY,
-        2
-    );
-
-
-    Serial.print(
-        "Accel Z: "
-    );
-
-    Serial.println(
-        accelZ,
-        2
-    );
-
-
-    Serial.print(
-        "Gyro X: "
-    );
-
-    Serial.println(
-        gyroX,
-        2
-    );
-
-
-    Serial.print(
-        "Gyro Y: "
-    );
-
-    Serial.println(
-        gyroY,
-        2
-    );
-
-
-    Serial.print(
-        "Gyro Z: "
-    );
-
-    Serial.println(
-        gyroZ,
-        2
-    );
-
-
-    // ==================================================
-    // BUILD CURRENT PAYLOAD
+    // CURRENT PAYLOAD
     // ==================================================
 
     String currentPayload = "{";
 
 
     // ==================================================
-    // GPS DATA
+    // GPS
     // ==================================================
 
-    if (
-        gpsAvailable
-    )
+    if (gpsAvailable)
     {
-        currentPayload +=
-            "\"latitude\":";
+        currentPayload += "\"latitude\":";
+        currentPayload += String(latitude, 6);
+        currentPayload += ",";
 
 
-        currentPayload +=
-            String(
-                latitude,
-                6
-            );
+        currentPayload += "\"longitude\":";
+        currentPayload += String(longitude, 6);
+        currentPayload += ",";
 
 
-        currentPayload +=
-            ",";
+        currentPayload += "\"altitude\":";
+        currentPayload += String(altitude, 1);
+        currentPayload += ",";
 
 
-        currentPayload +=
-            "\"longitude\":";
+        currentPayload += "\"gpsTime\":\"";
+        currentPayload += gpsTime;
+        currentPayload += "\",";
 
 
-        currentPayload +=
-            String(
-                longitude,
-                6
-            );
-
-
-        currentPayload +=
-            ",";
-
-
-        currentPayload +=
-            "\"altitude\":";
-
-
-        currentPayload +=
-            String(
-                altitude,
-                1
-            );
-
-
-        currentPayload +=
-            ",";
-
-
-        currentPayload +=
-            "\"gpsTime\":\"";
-
-
-        currentPayload +=
-            gpsTime;
-
-
-        currentPayload +=
-            "\",";
-
-
-        currentPayload +=
-            "\"gpsDate\":\"";
-
-
-        currentPayload +=
-            gpsDate;
-
-
-        currentPayload +=
-            "\",";
+        currentPayload += "\"gpsDate\":\"";
+        currentPayload += gpsDate;
+        currentPayload += "\",";
     }
 
 
     // ==================================================
-    // COMMON DATA
+    // COMMON
     // ==================================================
 
-    currentPayload +=
-        "\"timestamp\":\"";
+    currentPayload += "\"timestamp\":\"";
+    currentPayload += timestamp;
+    currentPayload += "\",";
 
 
-    currentPayload +=
-        timestamp;
+    currentPayload += "\"source\":\"";
+    currentPayload += source;
+    currentPayload += "\",";
 
 
-    currentPayload +=
-        "\",";
+    currentPayload += "\"status\":\"";
+    currentPayload += status;
+    currentPayload += "\",";
 
 
-    currentPayload +=
-        "\"source\":\"";
+    currentPayload += "\"motion\":\"";
+    currentPayload += motion;
+    currentPayload += "\",";
 
 
-    currentPayload +=
-        source;
+    currentPayload += "\"trackerMode\":\"";
+    currentPayload += trackerMode;
+    currentPayload += "\",";
 
 
-    currentPayload +=
-        "\",";
-
-
-    currentPayload +=
-        "\"status\":\"";
-
-
-    currentPayload +=
-        status;
-
-
-    currentPayload +=
-        "\",";
-
-
-    currentPayload +=
-        "\"motion\":\"";
-
-
-    currentPayload +=
-        motion;
-
-
-    currentPayload +=
-        "\",";
-
-
-    currentPayload +=
-        "\"trackerMode\":\"";
-
-
-    currentPayload +=
-        trackerMode;
-
-
-    currentPayload +=
-        "\",";
-
-
-    currentPayload +=
-        "\"battery\":";
-
-
-    currentPayload +=
-        String(
-            battery
-        );
-
-
-    currentPayload +=
-        ",";
+    currentPayload += "\"battery\":";
+    currentPayload += String(battery);
+    currentPayload += ",";
 
 
     // ==================================================
-    // ACCELEROMETER
+    // ACCELERATION
     // ==================================================
 
-    currentPayload +=
-        "\"acceleration\":{";
+    currentPayload += "\"acceleration\":{";
 
 
-    currentPayload +=
-        "\"x\":";
+    currentPayload += "\"x\":";
+    currentPayload += String(accelX, 3);
+    currentPayload += ",";
 
 
-    currentPayload +=
-        String(
-            accelX,
-            3
-        );
+    currentPayload += "\"y\":";
+    currentPayload += String(accelY, 3);
+    currentPayload += ",";
 
 
-    currentPayload +=
-        ",";
+    currentPayload += "\"z\":";
+    currentPayload += String(accelZ, 3);
 
 
-    currentPayload +=
-        "\"y\":";
-
-
-    currentPayload +=
-        String(
-            accelY,
-            3
-        );
-
-
-    currentPayload +=
-        ",";
-
-
-    currentPayload +=
-        "\"z\":";
-
-
-    currentPayload +=
-        String(
-            accelZ,
-            3
-        );
-
-
-    currentPayload +=
-        "},";
+    currentPayload += "},";
 
 
     // ==================================================
     // GYROSCOPE
     // ==================================================
 
-    currentPayload +=
-        "\"gyroscope\":{";
+    currentPayload += "\"gyroscope\":{";
 
 
-    currentPayload +=
-        "\"x\":";
+    currentPayload += "\"x\":";
+    currentPayload += String(gyroX, 3);
+    currentPayload += ",";
 
 
-    currentPayload +=
-        String(
-            gyroX,
-            3
-        );
+    currentPayload += "\"y\":";
+    currentPayload += String(gyroY, 3);
+    currentPayload += ",";
 
 
-    currentPayload +=
-        ",";
+    currentPayload += "\"z\":";
+    currentPayload += String(gyroZ, 3);
 
 
-    currentPayload +=
-        "\"y\":";
+    currentPayload += "}";
 
 
-    currentPayload +=
-        String(
-            gyroY,
-            3
-        );
-
-
-    currentPayload +=
-        ",";
-
-
-    currentPayload +=
-        "\"z\":";
-
-
-    currentPayload +=
-        String(
-            gyroZ,
-            3
-        );
-
-
-    currentPayload +=
-        "}";
-
-
-    // ==================================================
-    // CLOSE JSON
-    // ==================================================
-
-    currentPayload +=
-        "}";
+    currentPayload += "}";
 
 
     // ==================================================
@@ -1473,369 +1183,196 @@ bool sendLocation(
     String statusPayload = "{";
 
 
-    statusPayload +=
-        "\"status\":\"";
+    statusPayload += "\"status\":\"";
+    statusPayload += status;
+    statusPayload += "\",";
 
 
-    statusPayload +=
-        status;
+    statusPayload += "\"source\":\"";
+    statusPayload += source;
+    statusPayload += "\",";
 
 
-    statusPayload +=
-        "\",";
+    statusPayload += "\"motion\":\"";
+    statusPayload += motion;
+    statusPayload += "\",";
 
 
-    statusPayload +=
-        "\"source\":\"";
+    statusPayload += "\"trackerMode\":\"";
+    statusPayload += trackerMode;
+    statusPayload += "\",";
 
 
-    statusPayload +=
-        source;
+    statusPayload += "\"battery\":";
+    statusPayload += String(battery);
+    statusPayload += ",";
 
 
-    statusPayload +=
-        "\",";
-
-
-    statusPayload +=
-        "\"motion\":\"";
-
-
-    statusPayload +=
-        motion;
-
-
-    statusPayload +=
-        "\",";
-
-
-    statusPayload +=
-        "\"trackerMode\":\"";
-
-
-    statusPayload +=
-        trackerMode;
-
-
-    statusPayload +=
-        "\",";
-
-
-    statusPayload +=
-        "\"battery\":";
-
-
-    statusPayload +=
-        String(
-            battery
-        );
-
-
-    statusPayload +=
-        ",";
-
-
-    statusPayload +=
-        "\"timestamp\":\"";
-
-
-    statusPayload +=
-        timestamp;
-
-
-    statusPayload +=
-        "\",";
+    statusPayload += "\"timestamp\":\"";
+    statusPayload += timestamp;
+    statusPayload += "\",";
 
 
     // ==================================================
     // STATUS ACCELERATION
     // ==================================================
 
-    statusPayload +=
-        "\"acceleration\":{";
+    statusPayload += "\"acceleration\":{";
 
 
-    statusPayload +=
-        "\"x\":";
+    statusPayload += "\"x\":";
+    statusPayload += String(accelX, 3);
+    statusPayload += ",";
 
 
-    statusPayload +=
-        String(
-            accelX,
-            3
-        );
+    statusPayload += "\"y\":";
+    statusPayload += String(accelY, 3);
+    statusPayload += ",";
 
 
-    statusPayload +=
-        ",";
+    statusPayload += "\"z\":";
+    statusPayload += String(accelZ, 3);
 
 
-    statusPayload +=
-        "\"y\":";
-
-
-    statusPayload +=
-        String(
-            accelY,
-            3
-        );
-
-
-    statusPayload +=
-        ",";
-
-
-    statusPayload +=
-        "\"z\":";
-
-
-    statusPayload +=
-        String(
-            accelZ,
-            3
-        );
-
-
-    statusPayload +=
-        "},";
+    statusPayload += "},";
 
 
     // ==================================================
     // STATUS GYROSCOPE
     // ==================================================
 
-    statusPayload +=
-        "\"gyroscope\":{";
+    statusPayload += "\"gyroscope\":{";
 
 
-    statusPayload +=
-        "\"x\":";
+    statusPayload += "\"x\":";
+    statusPayload += String(gyroX, 3);
+    statusPayload += ",";
 
 
-    statusPayload +=
-        String(
-            gyroX,
-            3
-        );
+    statusPayload += "\"y\":";
+    statusPayload += String(gyroY, 3);
+    statusPayload += ",";
 
 
-    statusPayload +=
-        ",";
+    statusPayload += "\"z\":";
+    statusPayload += String(gyroZ, 3);
 
 
-    statusPayload +=
-        "\"y\":";
+    statusPayload += "}";
 
 
-    statusPayload +=
-        String(
-            gyroY,
-            3
-        );
-
-
-    statusPayload +=
-        ",";
-
-
-    statusPayload +=
-        "\"z\":";
-
-
-    statusPayload +=
-        String(
-            gyroZ,
-            3
-        );
-
-
-    statusPayload +=
-        "}";
+    statusPayload += "}";
 
 
     // ==================================================
-    // CLOSE STATUS JSON
-    // ==================================================
-
-    statusPayload +=
-        "}";
-
-
-    // ==================================================
-    // DISPLAY PAYLOAD
+    // DEBUG PAYLOADS
     // ==================================================
 
     Serial.println();
+    Serial.println("CURRENT PAYLOAD:");
+    Serial.println(currentPayload);
 
-    Serial.println(
-        "================================"
-    );
-
-    Serial.println(
-        "FIREBASE TRACKER UPDATE"
-    );
-
-    Serial.println(
-        "================================"
-    );
-
-    Serial.println(
-        currentPayload
-    );
-
-    Serial.println(
-        "================================"
-    );
+    Serial.println();
+    Serial.println("STATUS PAYLOAD:");
+    Serial.println(statusPayload);
 
 
     // ==================================================
     // HISTORY
     // ==================================================
 
-    Serial.println(
-        "Saving tracker state to HISTORY..."
-    );
-
-
     bool historySuccess =
-        sendFirebaseRequest(
-            historyURL,
-            currentPayload,
-            1
-        );
-
-
-    delay(1000);
-
-
-    // ==================================================
-    // CURRENT
-    // ==================================================
-
-    Serial.println(
-        "Updating CURRENT tracker state..."
-    );
-
-
-    bool currentSuccess =
-        sendFirebaseRequest(
-            currentURL,
-            currentPayload,
-            2
-        );
-
-
-    delay(1000);
-
-
-    // ==================================================
-    // STATUS
-    // ==================================================
-
-    Serial.println(
-        "Updating STATUS..."
-    );
-
-
-    bool statusSuccess =
-        sendFirebaseRequest(
-            statusURL,
-            statusPayload,
-            2
+        saveHistoryOrQueue(
+            currentPayload
         );
 
 
     // ==================================================
-    // RESULTS
+    // CURRENT + STATUS
     // ==================================================
 
-    Serial.println();
+    bool currentSuccess = false;
 
-    Serial.println(
-        "Firebase tracker upload results:"
-    );
+    bool statusSuccess = false;
 
 
-    Serial.print(
-        "History: "
-    );
-
-    Serial.println(
-        historySuccess
-            ? "SUCCESS"
-            : "FAILED"
-    );
-
-
-    Serial.print(
-        "Current: "
-    );
-
-    Serial.println(
-        currentSuccess
-            ? "SUCCESS"
-            : "FAILED"
-    );
-
-
-    Serial.print(
-        "Status: "
-    );
-
-    Serial.println(
-        statusSuccess
-            ? "SUCCESS"
-            : "FAILED"
-    );
-
-
-    if (
-        historySuccess &&
-        currentSuccess &&
-        statusSuccess
-    )
+    if (hasNetworkConnection())
     {
-        Serial.println();
+        // ==================================================
+        // CURRENT
+        // ==================================================
 
-        Serial.println(
-            "COMPLETE TRACKER UPDATE SUCCESSFUL."
-        );
+        currentSuccess =
+            sendFirebaseRequest(
+                currentURL,
+                currentPayload,
+                2
+            );
+
+
+        delay(500);
+
+
+        // ==================================================
+        // STATUS
+        // ==================================================
+
+        statusSuccess =
+            sendFirebaseRequest(
+                statusURL,
+                statusPayload,
+                2
+            );
     }
     else
     {
         Serial.println();
-
-        Serial.println(
-            "COMPLETE TRACKER UPDATE FAILED."
-        );
+        Serial.println("Network unavailable.");
+        Serial.println("Current/status NOT updated.");
     }
 
 
-    return
-        historySuccess &&
-        currentSuccess &&
-        statusSuccess;
+    // ==================================================
+    // RESULT
+    // ==================================================
+
+    Serial.println();
+    Serial.println("Firebase tracker upload results:");
+
+
+    Serial.print("History: ");
+
+    Serial.println(
+        historySuccess
+            ? "SUCCESS"
+            : "QUEUED"
+    );
+
+
+    Serial.print("Current: ");
+
+    Serial.println(
+        currentSuccess
+            ? "SUCCESS"
+            : "NOT UPDATED"
+    );
+
+
+    Serial.print("Status: ");
+
+    Serial.println(
+        statusSuccess
+            ? "SUCCESS"
+            : "NOT UPDATED"
+    );
+
+
+    return historySuccess;
 }
 
 
 // ======================================================
 // LOG GPS NO FIX
-// ======================================================
-//
-// Saves sensor information even when GPS has no fix.
-//
-// Saves:
-//
-// - GPS status
-// - GPS date
-// - GPS time
-// - timestamp
-// - motion
-// - tracker mode
-// - battery
-// - accelerometer
-// - gyroscope
-//
 // ======================================================
 
 bool logGPSNoFix(
@@ -1845,12 +1382,17 @@ bool logGPSNoFix(
 {
     if (!gsmReady)
     {
-        Serial.println(
-            "GSM is not ready."
-        );
+        Serial.println("GSM is not ready.");
 
         return false;
     }
+
+
+    // ==================================================
+    // SYNC OLD DATA FIRST
+    // ==================================================
+
+    syncOfflineHistory();
 
 
     // ==================================================
@@ -1907,134 +1449,6 @@ bool logGPSNoFix(
 
 
     // ==================================================
-    // DISPLAY
-    // ==================================================
-
-    Serial.println();
-
-    Serial.println(
-        "================================"
-    );
-
-    Serial.println(
-        "GPS NO-FIX TRACKER STATE"
-    );
-
-    Serial.println(
-        "================================"
-    );
-
-
-    Serial.print(
-        "GPS Date: "
-    );
-
-    Serial.println(
-        gpsDate
-    );
-
-
-    Serial.print(
-        "GPS Time: "
-    );
-
-    Serial.println(
-        gpsTime
-    );
-
-
-    Serial.print(
-        "Motion: "
-    );
-
-    Serial.println(
-        motion
-    );
-
-
-    Serial.print(
-        "Tracker Mode: "
-    );
-
-    Serial.println(
-        trackerMode
-    );
-
-
-    Serial.print(
-        "Battery: "
-    );
-
-    Serial.print(
-        battery
-    );
-
-    Serial.println(
-        "%"
-    );
-
-
-    Serial.print(
-        "Accel X: "
-    );
-
-    Serial.println(
-        accelX,
-        2
-    );
-
-
-    Serial.print(
-        "Accel Y: "
-    );
-
-    Serial.println(
-        accelY,
-        2
-    );
-
-
-    Serial.print(
-        "Accel Z: "
-    );
-
-    Serial.println(
-        accelZ,
-        2
-    );
-
-
-    Serial.print(
-        "Gyro X: "
-    );
-
-    Serial.println(
-        gyroX,
-        2
-    );
-
-
-    Serial.print(
-        "Gyro Y: "
-    );
-
-    Serial.println(
-        gyroY,
-        2
-    );
-
-
-    Serial.print(
-        "Gyro Z: "
-    );
-
-    Serial.println(
-        gyroZ,
-        2
-    );
-
-
-    // ==================================================
     // BUILD PAYLOAD
     // ==================================================
 
@@ -2042,275 +1456,170 @@ bool logGPSNoFix(
 
 
     // ==================================================
-    // GPS STATUS
+    // STATUS
     // ==================================================
 
-    payload +=
-        "\"status\":\"NO_FIX\",";
+    payload += "\"status\":\"NO_FIX\",";
 
 
-    payload +=
-        "\"source\":\"device_sensor\",";
+    // ==================================================
+    // SOURCE
+    // ==================================================
+
+    payload += "\"source\":\"device_sensor\",";
 
 
-    payload +=
-        "\"gpsTime\":\"";
+    // ==================================================
+    // GPS TIME
+    // ==================================================
+
+    payload += "\"gpsTime\":\"";
+    payload += gpsTime;
+    payload += "\",";
 
 
-    payload +=
-        gpsTime;
+    // ==================================================
+    // GPS DATE
+    // ==================================================
+
+    payload += "\"gpsDate\":\"";
+    payload += gpsDate;
+    payload += "\",";
 
 
-    payload +=
-        "\",";
+    // ==================================================
+    // TIMESTAMP
+    // ==================================================
 
-
-    payload +=
-        "\"gpsDate\":\"";
-
-
-    payload +=
-        gpsDate;
-
-
-    payload +=
-        "\",";
-
-
-    payload +=
-        "\"timestamp\":\"";
-
-
-    payload +=
-        timestamp;
-
-
-    payload +=
-        "\",";
+    payload += "\"timestamp\":\"";
+    payload += timestamp;
+    payload += "\",";
 
 
     // ==================================================
     // MOTION
     // ==================================================
 
-    payload +=
-        "\"motion\":\"";
-
-
-    payload +=
-        motion;
-
-
-    payload +=
-        "\",";
+    payload += "\"motion\":\"";
+    payload += motion;
+    payload += "\",";
 
 
     // ==================================================
     // TRACKER MODE
     // ==================================================
 
-    payload +=
-        "\"trackerMode\":\"";
-
-
-    payload +=
-        trackerMode;
-
-
-    payload +=
-        "\",";
+    payload += "\"trackerMode\":\"";
+    payload += trackerMode;
+    payload += "\",";
 
 
     // ==================================================
     // BATTERY
     // ==================================================
 
-    payload +=
-        "\"battery\":";
-
-
-    payload +=
-        String(
-            battery
-        );
-
-
-    payload +=
-        ",";
+    payload += "\"battery\":";
+    payload += String(battery);
+    payload += ",";
 
 
     // ==================================================
-    // ACCELEROMETER
+    // ACCELERATION
     // ==================================================
 
-    payload +=
-        "\"acceleration\":{";
+    payload += "\"acceleration\":{";
 
 
-    payload +=
-        "\"x\":";
+    payload += "\"x\":";
+    payload += String(accelX, 3);
+    payload += ",";
 
 
-    payload +=
-        String(
-            accelX,
-            3
-        );
+    payload += "\"y\":";
+    payload += String(accelY, 3);
+    payload += ",";
 
 
-    payload +=
-        ",";
+    payload += "\"z\":";
+    payload += String(accelZ, 3);
 
 
-    payload +=
-        "\"y\":";
-
-
-    payload +=
-        String(
-            accelY,
-            3
-        );
-
-
-    payload +=
-        ",";
-
-
-    payload +=
-        "\"z\":";
-
-
-    payload +=
-        String(
-            accelZ,
-            3
-        );
-
-
-    payload +=
-        "},";
+    payload += "},";
 
 
     // ==================================================
     // GYROSCOPE
     // ==================================================
 
-    payload +=
-        "\"gyroscope\":{";
+    payload += "\"gyroscope\":{";
 
 
-    payload +=
-        "\"x\":";
+    payload += "\"x\":";
+    payload += String(gyroX, 3);
+    payload += ",";
 
 
-    payload +=
-        String(
-            gyroX,
-            3
-        );
+    payload += "\"y\":";
+    payload += String(gyroY, 3);
+    payload += ",";
 
 
-    payload +=
-        ",";
+    payload += "\"z\":";
+    payload += String(gyroZ, 3);
 
 
-    payload +=
-        "\"y\":";
+    payload += "}";
 
 
-    payload +=
-        String(
-            gyroY,
-            3
-        );
-
-
-    payload +=
-        ",";
-
-
-    payload +=
-        "\"z\":";
-
-
-    payload +=
-        String(
-            gyroZ,
-            3
-        );
-
-
-    payload +=
-        "}";
+    payload += "}";
 
 
     // ==================================================
-    // CLOSE JSON
-    // ==================================================
-
-    payload +=
-        "}";
-
-
-    // ==================================================
-    // DISPLAY PAYLOAD
+    // DEBUG
     // ==================================================
 
     Serial.println();
-
-    Serial.println(
-        "GPS NO-FIX PAYLOAD:"
-    );
-
-
-    Serial.println(
-        payload
-    );
+    Serial.println("NO_FIX PAYLOAD:");
+    Serial.println(payload);
 
 
     // ==================================================
-    // SAVE TO HISTORY
+    // SAVE / UPLOAD HISTORY
     // ==================================================
-
-    Serial.println();
-
-    Serial.println(
-        "Saving GPS NO_FIX state to HISTORY..."
-    );
-
 
     bool success =
-        sendFirebaseRequest(
-            historyURL,
-            payload,
-            1
+        saveHistoryOrQueue(
+            payload
         );
 
 
-    // ==================================================
-    // RESULT
-    // ==================================================
-
-    if (
-        success
-    )
+    if (success)
     {
         Serial.println();
-
         Serial.println(
-            "GPS NO_FIX STATE SAVED SUCCESSFULLY."
+            "GPS NO_FIX HISTORY SAVED/QUEUED."
         );
     }
     else
     {
         Serial.println();
-
         Serial.println(
-            "FAILED TO SAVE GPS NO_FIX STATE."
+            "FAILED TO SAVE GPS NO_FIX RECORD."
         );
     }
 
+
+    // ==================================================
+    // IMPORTANT
+    // ==================================================
+    //
+    // NO_FIX records NEVER update /current.
+    //
+    // NO_FIX records NEVER update /status.
+    //
+    // They are history-only records.
+    //
+    // ==================================================
 
     return success;
 }

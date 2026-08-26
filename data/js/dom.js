@@ -8,7 +8,9 @@
 // ======================================================
 
 const connectBtn =
-    document.getElementById("connectBtn");
+    document.getElementById(
+        "connectBtn"
+    );
 
 
 // ======================================================
@@ -16,7 +18,9 @@ const connectBtn =
 // ======================================================
 
 const ledBtn =
-    document.getElementById("ledBtn");
+    document.getElementById(
+        "ledBtn"
+    );
 
 
 // ======================================================
@@ -24,10 +28,15 @@ const ledBtn =
 // ======================================================
 
 const statusText =
-    document.getElementById("status");
+    document.getElementById(
+        "status"
+    );
+
 
 const bleStatus =
-    document.getElementById("bleStatus");
+    document.getElementById(
+        "bleStatus"
+    );
 
 
 // ======================================================
@@ -35,16 +44,27 @@ const bleStatus =
 // ======================================================
 
 const firebaseGpsStatus =
-    document.getElementById("firebaseGpsStatus");
+    document.getElementById(
+        "firebaseGpsStatus"
+    );
+
 
 const locationSource =
-    document.getElementById("locationSource");
+    document.getElementById(
+        "locationSource"
+    );
+
 
 const locationState =
-    document.getElementById("locationState");
+    document.getElementById(
+        "locationState"
+    );
+
 
 const statusTimestamp =
-    document.getElementById("statusTimestamp");
+    document.getElementById(
+        "statusTimestamp"
+    );
 
 
 // ======================================================
@@ -52,7 +72,9 @@ const statusTimestamp =
 // ======================================================
 
 const motionText =
-    document.getElementById("motion");
+    document.getElementById(
+        "motion"
+    );
 
 
 // ======================================================
@@ -60,7 +82,9 @@ const motionText =
 // ======================================================
 
 const batteryText =
-    document.getElementById("battery");
+    document.getElementById(
+        "battery"
+    );
 
 
 // ======================================================
@@ -68,13 +92,21 @@ const batteryText =
 // ======================================================
 
 const ax =
-    document.getElementById("ax");
+    document.getElementById(
+        "ax"
+    );
+
 
 const ay =
-    document.getElementById("ay");
+    document.getElementById(
+        "ay"
+    );
+
 
 const az =
-    document.getElementById("az");
+    document.getElementById(
+        "az"
+    );
 
 
 // ======================================================
@@ -82,13 +114,21 @@ const az =
 // ======================================================
 
 const gx =
-    document.getElementById("gx");
+    document.getElementById(
+        "gx"
+    );
+
 
 const gy =
-    document.getElementById("gy");
+    document.getElementById(
+        "gy"
+    );
+
 
 const gz =
-    document.getElementById("gz");
+    document.getElementById(
+        "gz"
+    );
 
 
 // ======================================================
@@ -96,19 +136,33 @@ const gz =
 // ======================================================
 
 const gpsStatus =
-    document.getElementById("gpsStatus");
+    document.getElementById(
+        "gpsStatus"
+    );
+
 
 const latitude =
-    document.getElementById("latitude");
+    document.getElementById(
+        "latitude"
+    );
+
 
 const longitude =
-    document.getElementById("longitude");
+    document.getElementById(
+        "longitude"
+    );
+
 
 const altitude =
-    document.getElementById("altitude");
+    document.getElementById(
+        "altitude"
+    );
+
 
 const gpsTime =
-    document.getElementById("gpsTime");
+    document.getElementById(
+        "gpsTime"
+    );
 
 
 // ======================================================
@@ -116,16 +170,27 @@ const gpsTime =
 // ======================================================
 
 const lastLatitude =
-    document.getElementById("lastLatitude");
+    document.getElementById(
+        "lastLatitude"
+    );
+
 
 const lastLongitude =
-    document.getElementById("lastLongitude");
+    document.getElementById(
+        "lastLongitude"
+    );
+
 
 const lastAltitude =
-    document.getElementById("lastAltitude");
+    document.getElementById(
+        "lastAltitude"
+    );
+
 
 const lastLocationTime =
-    document.getElementById("lastLocationTime");
+    document.getElementById(
+        "lastLocationTime"
+    );
 
 
 // ======================================================
@@ -133,10 +198,15 @@ const lastLocationTime =
 // ======================================================
 
 const mapLatitude =
-    document.getElementById("mapLatitude");
+    document.getElementById(
+        "mapLatitude"
+    );
+
 
 const mapLongitude =
-    document.getElementById("mapLongitude");
+    document.getElementById(
+        "mapLongitude"
+    );
 
 
 // ======================================================
