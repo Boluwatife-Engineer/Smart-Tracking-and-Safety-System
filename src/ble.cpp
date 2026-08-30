@@ -10,77 +10,165 @@
 #include "pins.h"
 #include "uuids.h"
 #include "gps.h"
+#include "sos.h"
+
 
 bool deviceConnected = false;
+
+
+// ======================================================
+// BLE CONNECTION STATE
+// ======================================================
 
 bool isBLEConnected()
 {
     return deviceConnected;
 }
 
+
+// ======================================================
+// INITIALIZE BLE
+// ======================================================
+
 void initBLE()
 {
-    pinMode(BUZZER_PIN, OUTPUT);
-    digitalWrite(BUZZER_PIN, LOW);
+    pinMode(
+        BUZZER_PIN,
+        OUTPUT
+    );
 
-    NimBLEDevice::init("Smart Tracker");
+    digitalWrite(
+        BUZZER_PIN,
+        LOW
+    );
+
+
+    NimBLEDevice::init(
+        "Smart Tracker"
+    );
+
 
     NimBLEServer *server =
         NimBLEDevice::createServer();
 
+
     server->setCallbacks(
-        new ServerCallbacks());
+        new ServerCallbacks()
+    );
+
 
     NimBLEService *service =
         server->createService(
-            SERVICE_UUID);
+            SERVICE_UUID
+        );
 
-    createCharacteristics(service);
+
+    createCharacteristics(
+        service
+    );
+
 
     service->start();
+
 
     NimBLEAdvertising *advertising =
         NimBLEDevice::getAdvertising();
 
+
     advertising->addServiceUUID(
-        SERVICE_UUID);
+        SERVICE_UUID
+    );
 
-    advertising->enableScanResponse(true);
 
-    advertising->setName("Smart Tracker");
+    advertising->enableScanResponse(
+        true
+    );
+
+
+    advertising->setName(
+        "Smart Tracker"
+    );
+
 
     advertising->start();
 
-    Serial.println("Advertising Started");
+
+    Serial.println(
+        "Advertising Started"
+    );
 }
+
+
+// ======================================================
+// UPDATE BLE
+// ======================================================
 
 void updateBLE()
 {
+    // --------------------------------------------------
+    // BLE-specific data stops here when disconnected.
+    // SOS itself does NOT depend on this function.
+    // --------------------------------------------------
+
     if (!deviceConnected)
     {
         return;
     }
 
-    // ================= MOTION =================
 
-    bool moving = isMoving();
+    // ==================================================
+    // SOS
+    // ==================================================
 
-    // ================= MPU6050 =================
+    sosChar->setValue(
+        isSOSActive()
+            ? "ACTIVE"
+            : "INACTIVE"
+    );
 
-    float ax = getAccelX();
-    float ay = getAccelY();
-    float az = getAccelZ();
+    sosChar->notify();
 
-    float gx = getGyroX();
-    float gy = getGyroY();
-    float gz = getGyroZ();
 
-    // ================= SERIAL =================
+    // ==================================================
+    // MOTION
+    // ==================================================
+
+    bool moving =
+        isMoving();
+
+
+    // ==================================================
+    // MPU6050
+    // ==================================================
+
+    float ax =
+        getAccelX();
+
+    float ay =
+        getAccelY();
+
+    float az =
+        getAccelZ();
+
+
+    float gx =
+        getGyroX();
+
+    float gy =
+        getGyroY();
+
+    float gz =
+        getGyroZ();
+
+
+    // ==================================================
+    // SERIAL
+    // ==================================================
 
     Serial.printf(
         "Accel: %.2f %.2f %.2f | "
         "Gyro: %.2f %.2f %.2f | "
-        "%s | Battery: %d%%\n",
+        "%s | Battery: %d%% | SOS: %s\n",
 
         ax,
         ay,
@@ -94,10 +182,17 @@ void updateBLE()
             ? "MOVING"
             : "STATIONARY",
 
-        getBatteryLevel()
+        getBatteryLevel(),
+
+        isSOSActive()
+            ? "ACTIVE"
+            : "INACTIVE"
     );
 
-    // ================= MOTION =================
+
+    // ==================================================
+    // MOTION
+    // ==================================================
 
     motionChar->setValue(
         moving
@@ -107,83 +202,182 @@ void updateBLE()
 
     motionChar->notify();
 
-    // ================= ACCELEROMETER =================
 
-    String axValue = String(ax, 2);
-    String ayValue = String(ay, 2);
-    String azValue = String(az, 2);
+    // ==================================================
+    // ACCELEROMETER
+    // ==================================================
 
-    accelXChar->setValue(axValue.c_str());
-    accelYChar->setValue(ayValue.c_str());
-    accelZChar->setValue(azValue.c_str());
+    String axValue =
+        String(
+            ax,
+            2
+        );
+
+
+    String ayValue =
+        String(
+            ay,
+            2
+        );
+
+
+    String azValue =
+        String(
+            az,
+            2
+        );
+
+
+    accelXChar->setValue(
+        axValue.c_str()
+    );
+
+
+    accelYChar->setValue(
+        ayValue.c_str()
+    );
+
+
+    accelZChar->setValue(
+        azValue.c_str()
+    );
+
 
     accelXChar->notify();
+
     accelYChar->notify();
+
     accelZChar->notify();
 
-    // ================= GYROSCOPE =================
 
-    String gxValue = String(gx, 2);
-    String gyValue = String(gy, 2);
-    String gzValue = String(gz, 2);
+    // ==================================================
+    // GYROSCOPE
+    // ==================================================
 
-    gyroXChar->setValue(gxValue.c_str());
-    gyroYChar->setValue(gyValue.c_str());
-    gyroZChar->setValue(gzValue.c_str());
+    String gxValue =
+        String(
+            gx,
+            2
+        );
+
+
+    String gyValue =
+        String(
+            gy,
+            2
+        );
+
+
+    String gzValue =
+        String(
+            gz,
+            2
+        );
+
+
+    gyroXChar->setValue(
+        gxValue.c_str()
+    );
+
+
+    gyroYChar->setValue(
+        gyValue.c_str()
+    );
+
+
+    gyroZChar->setValue(
+        gzValue.c_str()
+    );
+
 
     gyroXChar->notify();
+
     gyroYChar->notify();
+
     gyroZChar->notify();
 
-    // ================= BATTERY =================
 
-    uint8_t level = getBatteryLevel();
+    // ==================================================
+    // BATTERY
+    // ==================================================
 
-    batteryChar->setValue(&level, 1);
+    uint8_t level =
+        getBatteryLevel();
+
+
+    batteryChar->setValue(
+        &level,
+        1
+    );
+
+
     batteryChar->notify();
 
-    // ================= GPS =================
 
-       // ================= GPS =================
+    // ==================================================
+    // GPS
+    // ==================================================
 
     if (hasGPSFix())
     {
         String latitude =
-            String(getLatitude(), 6);
+            String(
+                getLatitude(),
+                6
+            );
+
 
         String longitude =
-            String(getLongitude(), 6);
+            String(
+                getLongitude(),
+                6
+            );
+
 
         String altitude =
-            String(getAltitude(), 1);
+            String(
+                getAltitude(),
+                1
+            );
+
 
         String gpsTime =
             getGPSTime();
+
 
         gpsLatitudeChar->setValue(
             latitude.c_str()
         );
 
+
         gpsLongitudeChar->setValue(
             longitude.c_str()
         );
+
 
         gpsAltitudeChar->setValue(
             altitude.c_str()
         );
 
+
         gpsTimeChar->setValue(
             gpsTime.c_str()
         );
+
 
         gpsStatusChar->setValue(
             "FIXED"
         );
 
+
         gpsLatitudeChar->notify();
+
         gpsLongitudeChar->notify();
+
         gpsAltitudeChar->notify();
+
         gpsTimeChar->notify();
+
         gpsStatusChar->notify();
     }
     else
@@ -192,7 +386,9 @@ void updateBLE()
             "NO_FIX"
         );
 
+
         gpsStatusChar->notify();
+
 
         Serial.println(
             "BLE GPS STATUS: NO_FIX"

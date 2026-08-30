@@ -23,10 +23,16 @@ import {
     GPS_LONGITUDE_UUID,
     GPS_ALTITUDE_UUID,
     GPS_TIME_UUID,
-    GPS_STATUS_UUID
+    GPS_STATUS_UUID,
+
+    SOS_UUID
 
 } from "./uuids.js";
 
+
+// ======================================================
+// DOM
+// ======================================================
 
 import {
 
@@ -51,10 +57,16 @@ import {
     latitude,
     longitude,
     altitude,
-    gpsTime
+    gpsTime,
+
+    sosStatus
 
 } from "./dom.js";
 
+
+// ======================================================
+// MAP
+// ======================================================
 
 import {
 
@@ -89,6 +101,8 @@ let gpsLongitudeChar = null;
 let gpsAltitudeChar = null;
 let gpsTimeChar = null;
 let gpsStatusChar = null;
+
+let sosChar = null;
 
 let ledOn = false;
 
@@ -300,12 +314,10 @@ async function connectToDevice()
                 ACCEL_X_UUID
             );
 
-
         accelYChar =
             await service.getCharacteristic(
                 ACCEL_Y_UUID
             );
-
 
         accelZChar =
             await service.getCharacteristic(
@@ -322,12 +334,10 @@ async function connectToDevice()
                 GYRO_X_UUID
             );
 
-
         gyroYChar =
             await service.getCharacteristic(
                 GYRO_Y_UUID
             );
-
 
         gyroZChar =
             await service.getCharacteristic(
@@ -364,28 +374,34 @@ async function connectToDevice()
                 GPS_LATITUDE_UUID
             );
 
-
         gpsLongitudeChar =
             await service.getCharacteristic(
                 GPS_LONGITUDE_UUID
             );
-
 
         gpsAltitudeChar =
             await service.getCharacteristic(
                 GPS_ALTITUDE_UUID
             );
 
-
         gpsTimeChar =
             await service.getCharacteristic(
                 GPS_TIME_UUID
             );
 
-
         gpsStatusChar =
             await service.getCharacteristic(
                 GPS_STATUS_UUID
+            );
+
+
+        // ==================================================
+        // SOS
+        // ==================================================
+
+        sosChar =
+            await service.getCharacteristic(
+                SOS_UUID
             );
 
 
@@ -410,6 +426,8 @@ async function connectToDevice()
         await gpsAltitudeChar.startNotifications();
         await gpsTimeChar.startNotifications();
         await gpsStatusChar.startNotifications();
+
+        await sosChar.startNotifications();
 
 
         // ==================================================
@@ -515,10 +533,8 @@ async function connectToDevice()
                 const value =
                     decode(event);
 
-
                 latitude.textContent =
                     value;
-
 
                 updateMap();
             }
@@ -536,10 +552,8 @@ async function connectToDevice()
                 const value =
                     decode(event);
 
-
                 longitude.textContent =
                     value;
-
 
                 updateMap();
             }
@@ -590,6 +604,21 @@ async function connectToDevice()
 
 
         // ==================================================
+        // SOS
+        // ==================================================
+
+        sosChar.addEventListener(
+            "characteristicvaluechanged",
+            event =>
+            {
+                updateSOSStatus(
+                    decode(event)
+                );
+            }
+        );
+
+
+        // ==================================================
         // INITIAL BATTERY
         // ==================================================
 
@@ -612,6 +641,21 @@ async function connectToDevice()
         updateGPSStatus(
             decodeValue(
                 gpsStatusValue
+            )
+        );
+
+
+        // ==================================================
+        // INITIAL SOS STATUS
+        // ==================================================
+
+        const sosValue =
+            await sosChar.readValue();
+
+
+        updateSOSStatus(
+            decodeValue(
+                sosValue
             )
         );
 
@@ -657,7 +701,6 @@ function setConnectedUI()
         bleStatus.textContent =
             "Connected";
 
-
         bleStatus.className =
             "gps-fixed";
     }
@@ -675,6 +718,37 @@ function setConnectedUI()
     {
         ledBtn.disabled =
             false;
+    }
+}
+
+
+// ======================================================
+// SOS STATUS
+// ======================================================
+
+function updateSOSStatus(value)
+{
+    const status =
+        String(value).trim();
+
+
+    sosStatus.textContent =
+        status;
+
+
+    if (
+        status ===
+        "ACTIVE"
+    )
+    {
+        sosStatus.className =
+            "sos-active";
+    }
+
+    else
+    {
+        sosStatus.className =
+            "sos-inactive";
     }
 }
 
@@ -865,7 +939,6 @@ function onDisconnected()
     statusText.textContent =
         "Disconnected";
 
-
     statusText.className =
         "status";
 
@@ -875,7 +948,6 @@ function onDisconnected()
         bleStatus.textContent =
             "Disconnected";
 
-
         bleStatus.className =
             "gps-searching";
     }
@@ -884,60 +956,43 @@ function onDisconnected()
     connectBtn.disabled =
         false;
 
-
     connectBtn.textContent =
         "Connect Device";
 
 
     // ==================================================
-    // IMPORTANT
-    // ==================================================
-    //
-    // DO NOT CLEAR:
-    //
-    // - Motion
-    // - Battery
-    // - Acceleration
-    // - Gyroscope
-    //
-    // Firebase /current will continue supplying
-    // these values every 3 seconds.
-    //
-    // ==================================================
-
-
-    // ==================================================
     // DEVICE GPS
-    // ==================================================
-    //
-    // BLE GPS is no longer available.
-    //
-    // Firebase GPS is handled separately by app.js.
-    //
     // ==================================================
 
     gpsStatus.textContent =
         "DISCONNECTED";
 
-
     gpsStatus.className =
         "gps-searching";
-
 
     latitude.textContent =
         "-";
 
-
     longitude.textContent =
         "-";
-
 
     altitude.textContent =
         "-";
 
-
     gpsTime.textContent =
         "-";
+
+
+    // ==================================================
+    // SOS
+    // ==================================================
+    //
+    // DO NOTHING HERE.
+    //
+    // SOS is independent of BLE.
+    // Keep the last known SOS state on screen.
+    //
+    // ==================================================
 
 
     // ==================================================
@@ -949,11 +1004,9 @@ function onDisconnected()
         ledBtn.disabled =
             true;
 
-
         ledBtn.textContent =
             "Turn ON Sound";
     }
-
 
     ledOn =
         false;
@@ -966,76 +1019,63 @@ function onDisconnected()
     server =
         null;
 
-
     service =
         null;
-
 
     motionChar =
         null;
 
-
     accelXChar =
         null;
-
 
     accelYChar =
         null;
 
-
     accelZChar =
         null;
-
 
     gyroXChar =
         null;
 
-
     gyroYChar =
         null;
-
 
     gyroZChar =
         null;
 
-
     batteryChar =
         null;
-
 
     ledChar =
         null;
 
-
     gpsLatitudeChar =
         null;
-
 
     gpsLongitudeChar =
         null;
 
-
     gpsAltitudeChar =
         null;
-
 
     gpsTimeChar =
         null;
 
-
     gpsStatusChar =
+        null;
+
+    sosChar =
         null;
 }
 
 
 // ======================================================
-// EXPORT
+// EXPORTS
 // ======================================================
 
 export {
-
     connect,
     autoConnect,
     toggleLED
-
 };
+

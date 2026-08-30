@@ -35,6 +35,7 @@ const BATTERY_UUID =
 const BUZZER_UUID =
     "dabed4fd-f792-443f-b186-3da384f9d673";
 
+
 // ================= GPS UUIDS =================
 
 const GPS_LATITUDE_UUID =
@@ -52,9 +53,19 @@ const GPS_TIME_UUID =
 const GPS_STATUS_UUID =
     "66666666-6666-6666-6666-666666666665";
 
+
+// ================= SOS UUID =================
+
+const SOS_UUID =
+    "77777777-7777-7777-7777-777777777777";
+
+
 export {
+
     SERVICE_UUID,
+
     MOTION_UUID,
+
     LAST_SEEN_UUID,
 
     ACCEL_X_UUID,
@@ -66,11 +77,14 @@ export {
     GYRO_Z_UUID,
 
     BATTERY_UUID,
+
     BUZZER_UUID,
 
     GPS_LATITUDE_UUID,
     GPS_LONGITUDE_UUID,
     GPS_ALTITUDE_UUID,
     GPS_TIME_UUID,
-    GPS_STATUS_UUID
+    GPS_STATUS_UUID,
+
+    SOS_UUID
 };

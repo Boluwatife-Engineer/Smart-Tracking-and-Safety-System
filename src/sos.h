@@ -1,58 +1,48 @@
-#ifndef TRACKER_STATE_H
-#define TRACKER_STATE_H
+#ifndef SOS_H
+#define SOS_H
+
+#include <Arduino.h>
 
 
 // ======================================================
-// TRACKER MODES
+// INITIALIZE SOS
 // ======================================================
 
-enum TrackerMode
-{
-    MODE_BLE_CONNECTED,
-
-    MODE_AUTONOMOUS,
-
-    MODE_STATIONARY,
-
-    MODE_MOVING,
-
-    MODE_SOS
-};
+void initSOS();
 
 
 // ======================================================
-// GET CURRENT MODE
+// UPDATE SOS
 // ======================================================
 
-TrackerMode getTrackerMode();
-
-
-// ======================================================
-// UPDATE TRACKER MODE
-// ======================================================
-
-void updateTrackerMode();
+void updateSOS();
 
 
 // ======================================================
-// GET MODE NAME
+// GET SOS STATE
 // ======================================================
 
-const char* getTrackerModeName();
-
-
-// ======================================================
-// FORCE SOS MODE
-// ======================================================
-
-void activateSOS();
+bool isSOSActive();
 
 
 // ======================================================
-// CLEAR SOS MODE
+// CLEAR SOS
 // ======================================================
 
-void clearSOSMode();
+void clearSOS();
 
+
+// ======================================================
+// CHECK WHETHER SOS STATE JUST CHANGED
+// ======================================================
+
+bool hasSOSStateChanged();
+
+
+// ======================================================
+// CLEAR STATE CHANGE FLAG
+// ======================================================
+
+void clearSOSStateChanged();
 
 #endif

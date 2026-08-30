@@ -32,7 +32,6 @@ const statusText =
         "status"
     );
 
-
 const bleStatus =
     document.getElementById(
         "bleStatus"
@@ -48,22 +47,29 @@ const firebaseGpsStatus =
         "firebaseGpsStatus"
     );
 
-
 const locationSource =
     document.getElementById(
         "locationSource"
     );
-
 
 const locationState =
     document.getElementById(
         "locationState"
     );
 
-
 const statusTimestamp =
     document.getElementById(
         "statusTimestamp"
+    );
+
+
+// ======================================================
+// SOS
+// ======================================================
+
+const sosStatus =
+    document.getElementById(
+        "sosStatus"
     );
 
 
@@ -96,12 +102,10 @@ const ax =
         "ax"
     );
 
-
 const ay =
     document.getElementById(
         "ay"
     );
-
 
 const az =
     document.getElementById(
@@ -118,12 +122,10 @@ const gx =
         "gx"
     );
 
-
 const gy =
     document.getElementById(
         "gy"
     );
-
 
 const gz =
     document.getElementById(
@@ -140,24 +142,20 @@ const gpsStatus =
         "gpsStatus"
     );
 
-
 const latitude =
     document.getElementById(
         "latitude"
     );
-
 
 const longitude =
     document.getElementById(
         "longitude"
     );
 
-
 const altitude =
     document.getElementById(
         "altitude"
     );
-
 
 const gpsTime =
     document.getElementById(
@@ -174,18 +172,15 @@ const lastLatitude =
         "lastLatitude"
     );
 
-
 const lastLongitude =
     document.getElementById(
         "lastLongitude"
     );
 
-
 const lastAltitude =
     document.getElementById(
         "lastAltitude"
     );
-
 
 const lastLocationTime =
     document.getElementById(
@@ -201,7 +196,6 @@ const mapLatitude =
     document.getElementById(
         "mapLatitude"
     );
-
 
 const mapLongitude =
     document.getElementById(
@@ -226,6 +220,8 @@ export {
     locationSource,
     locationState,
     statusTimestamp,
+
+    sosStatus,
 
     motionText,
 

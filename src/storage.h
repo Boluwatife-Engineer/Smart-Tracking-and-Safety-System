@@ -4,14 +4,21 @@
 #include <Arduino.h>
 
 // ======================================================
-// BASIC STORAGE
+// STORAGE INITIALIZATION
 // ======================================================
 
 void initStorage();
 
-void saveLastSeen(
-    const String &value
-);
+
+// ======================================================
+// LAST SEEN
+// ======================================================
+//
+// Keep the original interface used by BLE code.
+//
+// ======================================================
+
+void saveLastSeen(const String &value);
 
 String loadLastSeen();
 
@@ -20,25 +27,60 @@ String loadLastSeen();
 // OFFLINE HISTORY QUEUE
 // ======================================================
 
-// Save one Firebase history JSON payload locally.
-bool saveOfflineRecord(
-    const String &payload
-);
+bool saveOfflineRecord(const String &payload);
 
-// Number of records currently waiting.
+String getOfflineRecord(int index);
+
+bool deleteOfflineRecord(int index);
+
 int getOfflineRecordCount();
 
-// Get oldest waiting record.
-String getOfflineRecord(
-    int index
+
+// ======================================================
+// OPTIONAL PERSISTENT SETTINGS
+// ======================================================
+
+void saveString(
+    const char *key,
+    const String &value
 );
 
-// Delete a record after successful Firebase upload.
-bool deleteOfflineRecord(
-    int index
+String loadString(
+    const char *key,
+    const String &defaultValue = ""
 );
 
-// Remove all offline records.
-void clearOfflineRecords();
+
+void saveFloat(
+    const char *key,
+    float value
+);
+
+float loadFloat(
+    const char *key,
+    float defaultValue = 0.0
+);
+
+
+void saveInt(
+    const char *key,
+    int value
+);
+
+int loadInt(
+    const char *key,
+    int defaultValue = 0
+);
+
+
+void saveBool(
+    const char *key,
+    bool value
+);
+
+bool loadBool(
+    const char *key,
+    bool defaultValue = false
+);
 
 #endif

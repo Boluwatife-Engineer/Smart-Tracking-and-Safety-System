@@ -1,5 +1,6 @@
 #include <Arduino.h>
 
+
 // ======================================================
 // MODULES
 // ======================================================
@@ -12,6 +13,7 @@
 #include "gsm.h"
 #include "sim7600.h"
 #include "tracker_state.h"
+#include "sos.h"
 
 
 // ======================================================
@@ -110,13 +112,36 @@ void setup()
 
 
     // ==================================================
+    // SOS
+    // ==================================================
+
+    initSOS();
+
+
+    // ==================================================
     // READY
     // ==================================================
 
     Serial.println();
-    Serial.println("================================");
-    Serial.println("       SMART TRACKER READY");
-    Serial.println("================================");
+
+    Serial.println(
+        "================================"
+    );
+
+    Serial.println(
+        "       SMART TRACKER READY"
+    );
+
+    Serial.println(
+        "================================"
+    );
+
+    Serial.println();
+
+    Serial.println(
+        "SOS BUTTON READY"
+    );
+
     Serial.println();
 }
 
@@ -130,12 +155,6 @@ void loop()
     // ==================================================
     // MPU6050
     // ==================================================
-    //
-    // Always update the MPU.
-    //
-    // BLE does NOT need to be connected.
-    // GPS does NOT need to have a fix.
-    //
 
     updateMPU();
 
@@ -155,6 +174,13 @@ void loop()
 
 
     // ==================================================
+    // SOS BUTTON
+    // ==================================================
+
+    updateSOS();
+
+
+    // ==================================================
     // TRACKER MODE
     // ==================================================
 
@@ -165,7 +191,8 @@ void loop()
     // CURRENT TIME
     // ==================================================
 
-    unsigned long currentTime = millis();
+    unsigned long currentTime =
+        millis();
 
 
     // ==================================================
@@ -177,26 +204,44 @@ void loop()
         SENSOR_LOG_INTERVAL
     )
     {
-        lastSensorLog = currentTime;
+        lastSensorLog =
+            currentTime;
 
 
         // ----------------------------------------------
         // READ SENSOR VALUES
         // ----------------------------------------------
 
-        float accelX = getAccelX();
-        float accelY = getAccelY();
-        float accelZ = getAccelZ();
+        float accelX =
+            getAccelX();
 
-        float gyroX = getGyroX();
-        float gyroY = getGyroY();
-        float gyroZ = getGyroZ();
+        float accelY =
+            getAccelY();
 
-        bool moving = isMoving();
+        float accelZ =
+            getAccelZ();
 
-        uint8_t battery = getBatteryLevel();
 
-        const char *mode = getTrackerModeName();
+        float gyroX =
+            getGyroX();
+
+        float gyroY =
+            getGyroY();
+
+        float gyroZ =
+            getGyroZ();
+
+
+        bool moving =
+            isMoving();
+
+
+        uint8_t battery =
+            getBatteryLevel();
+
+
+        const char *mode =
+            getTrackerModeName();
 
 
         // ----------------------------------------------
@@ -204,24 +249,40 @@ void loop()
         // ----------------------------------------------
 
         Serial.println();
-        Serial.println("================================");
-        Serial.println("LIVE TRACKER SENSOR DATA");
-        Serial.println("================================");
+
+        Serial.println(
+            "================================"
+        );
+
+        Serial.println(
+            "LIVE TRACKER SENSOR DATA"
+        );
+
+        Serial.println(
+            "================================"
+        );
 
 
         // ----------------------------------------------
         // BLE
         // ----------------------------------------------
 
-        Serial.print("BLE: ");
+        Serial.print(
+            "BLE: "
+        );
+
 
         if (isBLEConnected())
         {
-            Serial.println("CONNECTED");
+            Serial.println(
+                "CONNECTED"
+            );
         }
         else
         {
-            Serial.println("DISCONNECTED");
+            Serial.println(
+                "DISCONNECTED"
+            );
         }
 
 
@@ -229,23 +290,58 @@ void loop()
         // TRACKER MODE
         // ----------------------------------------------
 
-        Serial.print("Tracker Mode: ");
-        Serial.println(mode);
+        Serial.print(
+            "Tracker Mode: "
+        );
+
+        Serial.println(
+            mode
+        );
+
+
+        // ----------------------------------------------
+        // SOS
+        // ----------------------------------------------
+
+        Serial.print(
+            "SOS: "
+        );
+
+
+        if (isSOSActive())
+        {
+            Serial.println(
+                "ACTIVE"
+            );
+        }
+        else
+        {
+            Serial.println(
+                "INACTIVE"
+            );
+        }
 
 
         // ----------------------------------------------
         // MOTION
         // ----------------------------------------------
 
-        Serial.print("Motion: ");
+        Serial.print(
+            "Motion: "
+        );
+
 
         if (moving)
         {
-            Serial.println("MOVING");
+            Serial.println(
+                "MOVING"
+            );
         }
         else
         {
-            Serial.println("STATIONARY");
+            Serial.println(
+                "STATIONARY"
+            );
         }
 
 
@@ -253,15 +349,22 @@ void loop()
         // GPS
         // ----------------------------------------------
 
-        Serial.print("GPS: ");
+        Serial.print(
+            "GPS: "
+        );
+
 
         if (hasGPSFix())
         {
-            Serial.println("FIX AVAILABLE");
+            Serial.println(
+                "FIX AVAILABLE"
+            );
         }
         else
         {
-            Serial.println("NO FIX");
+            Serial.println(
+                "NO FIX"
+            );
         }
 
 
@@ -270,16 +373,40 @@ void loop()
         // ----------------------------------------------
 
         Serial.println();
-        Serial.println("ACCELEROMETER");
 
-        Serial.print("X: ");
-        Serial.println(accelX, 3);
+        Serial.println(
+            "ACCELEROMETER"
+        );
 
-        Serial.print("Y: ");
-        Serial.println(accelY, 3);
 
-        Serial.print("Z: ");
-        Serial.println(accelZ, 3);
+        Serial.print(
+            "X: "
+        );
+
+        Serial.println(
+            accelX,
+            3
+        );
+
+
+        Serial.print(
+            "Y: "
+        );
+
+        Serial.println(
+            accelY,
+            3
+        );
+
+
+        Serial.print(
+            "Z: "
+        );
+
+        Serial.println(
+            accelZ,
+            3
+        );
 
 
         // ----------------------------------------------
@@ -287,16 +414,40 @@ void loop()
         // ----------------------------------------------
 
         Serial.println();
-        Serial.println("GYROSCOPE");
 
-        Serial.print("X: ");
-        Serial.println(gyroX, 3);
+        Serial.println(
+            "GYROSCOPE"
+        );
 
-        Serial.print("Y: ");
-        Serial.println(gyroY, 3);
 
-        Serial.print("Z: ");
-        Serial.println(gyroZ, 3);
+        Serial.print(
+            "X: "
+        );
+
+        Serial.println(
+            gyroX,
+            3
+        );
+
+
+        Serial.print(
+            "Y: "
+        );
+
+        Serial.println(
+            gyroY,
+            3
+        );
+
+
+        Serial.print(
+            "Z: "
+        );
+
+        Serial.println(
+            gyroZ,
+            3
+        );
 
 
         // ----------------------------------------------
@@ -305,12 +456,22 @@ void loop()
 
         Serial.println();
 
-        Serial.print("Battery: ");
-        Serial.print(battery);
-        Serial.println("%");
+        Serial.print(
+            "Battery: "
+        );
+
+        Serial.print(
+            battery
+        );
+
+        Serial.println(
+            "%"
+        );
 
 
-        Serial.println("================================");
+        Serial.println(
+            "================================"
+        );
     }
 
 
@@ -329,48 +490,76 @@ void loop()
             LOCATION_SEND_INTERVAL
         )
         {
-            lastLocationSend = currentTime;
+            lastLocationSend =
+                currentTime;
 
 
             Serial.println();
-            Serial.println("================================");
-            Serial.println("GPS FIX AVAILABLE");
-            Serial.println("Preparing Firebase update");
-            Serial.println("================================");
+
+            Serial.println(
+                "================================"
+            );
+
+            Serial.println(
+                "GPS FIX AVAILABLE"
+            );
+
+            Serial.println(
+                "Preparing Firebase update"
+            );
+
+            Serial.println(
+                "================================"
+            );
 
 
             // ------------------------------------------------
             // GPS DATA
             // ------------------------------------------------
 
-            Serial.print("Latitude:  ");
+            Serial.print(
+                "Latitude:  "
+            );
+
             Serial.println(
                 getLatitude(),
                 6
             );
 
 
-            Serial.print("Longitude: ");
+            Serial.print(
+                "Longitude: "
+            );
+
             Serial.println(
                 getLongitude(),
                 6
             );
 
 
-            Serial.print("Altitude:  ");
+            Serial.print(
+                "Altitude:  "
+            );
+
             Serial.println(
                 getAltitude(),
                 1
             );
 
 
-            Serial.print("GPS Date:  ");
+            Serial.print(
+                "GPS Date:  "
+            );
+
             Serial.println(
                 getGPSDate()
             );
 
 
-            Serial.print("GPS Time:  ");
+            Serial.print(
+                "GPS Time:  "
+            );
+
             Serial.println(
                 getGPSTime()
             );
@@ -379,12 +568,6 @@ void loop()
             // ------------------------------------------------
             // SEND LOCATION
             // ------------------------------------------------
-            //
-            // IMPORTANT:
-            //
-            // The final argument TRUE tells gsm.cpp that
-            // GPS is available.
-            //
 
             bool success =
                 sendLocation(
@@ -402,6 +585,7 @@ void loop()
             // ------------------------------------------------
 
             Serial.println();
+
 
             if (success)
             {
@@ -427,23 +611,6 @@ void loop()
     {
         // ------------------------------------------------
         // GPS HAS NO FIX
-        //
-        // MPU6050 CONTINUES WORKING.
-        //
-        // BLE STATUS CONTINUES WORKING.
-        //
-        // MOTION DETECTION CONTINUES WORKING.
-        //
-        // Every 30 seconds we save:
-        //
-        // - NO_FIX
-        // - motion
-        // - tracker mode
-        // - battery
-        // - accelerometer
-        // - gyroscope
-        // - GPS date/time
-        //
         // ------------------------------------------------
 
         if (
@@ -451,23 +618,42 @@ void loop()
             NO_FIX_LOG_INTERVAL
         )
         {
-            lastNoFixLog = currentTime;
+            lastNoFixLog =
+                currentTime;
 
 
             Serial.println();
-            Serial.println("================================");
-            Serial.println("GPS HAS NO FIX");
-            Serial.println("Logging tracker sensor state");
-            Serial.println("================================");
+
+            Serial.println(
+                "================================"
+            );
+
+            Serial.println(
+                "GPS HAS NO FIX"
+            );
+
+            Serial.println(
+                "Logging tracker sensor state"
+            );
+
+            Serial.println(
+                "================================"
+            );
 
 
-            Serial.print("GPS Date: ");
+            Serial.print(
+                "GPS Date: "
+            );
+
             Serial.println(
                 getGPSDate()
             );
 
 
-            Serial.print("GPS Time: ");
+            Serial.print(
+                "GPS Time: "
+            );
+
             Serial.println(
                 getGPSTime()
             );
@@ -489,6 +675,7 @@ void loop()
             // ------------------------------------------------
 
             Serial.println();
+
 
             if (success)
             {

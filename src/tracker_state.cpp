@@ -4,13 +4,15 @@
 
 #include "ble.h"
 #include "mpu6050.h"
+#include "sos.h"
 
 
 // ======================================================
 // CURRENT TRACKER MODE
 // ======================================================
 
-static TrackerMode currentMode = MODE_BLE_CONNECTED;
+static TrackerMode currentMode =
+    MODE_BLE_CONNECTED;
 
 
 // ======================================================
@@ -30,12 +32,26 @@ TrackerMode getTrackerMode()
 void updateTrackerMode()
 {
     // ==================================================
+    // SOS HAS HIGHEST PRIORITY
+    // ==================================================
+
+    if (isSOSActive())
+    {
+        currentMode =
+            MODE_SOS;
+
+        return;
+    }
+
+
+    // ==================================================
     // BLE CONNECTED
     // ==================================================
 
     if (isBLEConnected())
     {
-        currentMode = MODE_BLE_CONNECTED;
+        currentMode =
+            MODE_BLE_CONNECTED;
 
         return;
     }
@@ -44,17 +60,20 @@ void updateTrackerMode()
     // ==================================================
     // BLE LOST
     // ==================================================
-
+    //
     // If BLE is lost, determine whether the tracker
     // is moving or stationary.
+    //
 
     if (isMoving())
     {
-        currentMode = MODE_MOVING;
+        currentMode =
+            MODE_MOVING;
     }
     else
     {
-        currentMode = MODE_STATIONARY;
+        currentMode =
+            MODE_STATIONARY;
     }
 }
 

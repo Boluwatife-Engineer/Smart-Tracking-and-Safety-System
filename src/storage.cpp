@@ -1,25 +1,232 @@
-// ======================================================
-// STORAGE
-// ======================================================
-
 #include "storage.h"
 
+#include <Arduino.h>
 #include <Preferences.h>
+#include <LittleFS.h>
+
+
+// ======================================================
+// PREFERENCES
+// ======================================================
 
 Preferences preferences;
 
+bool preferencesReady = false;
+
 
 // ======================================================
-// CONFIGURATION
+// LITTLEFS
 // ======================================================
 
-// Maximum number of offline records.
-//
-// Increase carefully because Preferences/NVS has
-// limited storage space.
-//
-// 20 records is a safe starting point for your payloads.
-#define MAX_OFFLINE_RECORDS 20
+bool littleFSReady = false;
+
+#define OFFLINE_DIRECTORY "/offline"
+#define OFFLINE_FILE_PREFIX "/offline/record_"
+#define OFFLINE_FILE_SUFFIX ".json"
+
+
+// ======================================================
+// OFFLINE QUEUE
+// ======================================================
+
+int offlineRecordCount = 0;
+int nextRecordID = 0;
+
+
+// ======================================================
+// INTERNAL HELPER
+// ======================================================
+
+String getRecordPath(int id)
+{
+    return String(OFFLINE_FILE_PREFIX) +
+           String(id) +
+           String(OFFLINE_FILE_SUFFIX);
+}
+
+
+// ======================================================
+// GET RECORD ID
+// ======================================================
+
+int getRecordID(const String &filename)
+{
+    String name = filename;
+
+    // --------------------------------------------------
+    // Some LittleFS versions may return:
+    //
+    // /offline/record_0.json
+    //
+    // while others may return:
+    //
+    // record_0.json
+    //
+    // Normalize it.
+    // --------------------------------------------------
+
+    int slash = name.lastIndexOf('/');
+
+    if (slash >= 0)
+    {
+        name = name.substring(slash + 1);
+    }
+
+
+    const String prefix = "record_";
+    const String suffix = ".json";
+
+
+    if (!name.startsWith(prefix))
+    {
+        return -1;
+    }
+
+
+    if (!name.endsWith(suffix))
+    {
+        return -1;
+    }
+
+
+    int start = prefix.length();
+
+    int end =
+        name.length() -
+        suffix.length();
+
+
+    if (start >= end)
+    {
+        return -1;
+    }
+
+
+    String idString =
+        name.substring(
+            start,
+            end
+        );
+
+
+    for (unsigned int i = 0; i < idString.length(); i++)
+    {
+        if (!isDigit(idString[i]))
+        {
+            return -1;
+        }
+    }
+
+
+    return idString.toInt();
+}
+
+
+// ======================================================
+// SCAN OFFLINE RECORDS
+// ======================================================
+
+void scanOfflineRecords()
+{
+    offlineRecordCount = 0;
+
+    int highestID = -1;
+
+
+    if (!littleFSReady)
+    {
+        return;
+    }
+
+
+    File directory =
+        LittleFS.open(
+            OFFLINE_DIRECTORY
+        );
+
+
+    if (!directory)
+    {
+        Serial.println(
+            "ERROR: Could not open offline directory."
+        );
+
+        return;
+    }
+
+
+    File file =
+        directory.openNextFile();
+
+
+    while (file)
+    {
+        if (!file.isDirectory())
+        {
+            String filename =
+                file.name();
+
+
+            int id =
+                getRecordID(
+                    filename
+                );
+
+
+            if (id >= 0)
+            {
+                offlineRecordCount++;
+
+
+                if (id > highestID)
+                {
+                    highestID = id;
+                }
+
+
+                Serial.print(
+                    "Found offline record: "
+                );
+
+                Serial.println(
+                    filename
+                );
+            }
+        }
+
+
+        file.close();
+
+
+        file =
+            directory.openNextFile();
+    }
+
+
+    directory.close();
+
+
+    nextRecordID =
+        highestID + 1;
+
+
+    Serial.print(
+        "LittleFS offline records: "
+    );
+
+    Serial.println(
+        offlineRecordCount
+    );
+
+
+    Serial.print(
+        "Next record ID: "
+    );
+
+    Serial.println(
+        nextRecordID
+    );
+}
 
 
 // ======================================================
@@ -28,59 +235,215 @@ Preferences preferences;
 
 void initStorage()
 {
-    preferences.begin(
-        "tracker",
-        false
-    );
-
     Serial.println();
     Serial.println(
-        "========== STORAGE INITIALIZED =========="
+        "========== STORAGE INITIALIZATION =========="
     );
 
+
+    // ==================================================
+    // PREFERENCES
+    // ==================================================
+
+    preferencesReady =
+        preferences.begin(
+            "tracker",
+            false
+        );
+
+
+    if (preferencesReady)
+    {
+        Serial.println(
+            "Preferences initialized."
+        );
+    }
+    else
+    {
+        Serial.println(
+            "ERROR: Preferences initialization failed."
+        );
+    }
+
+
+    // ==================================================
+    // LITTLEFS
+    // ==================================================
+
+    littleFSReady =
+        LittleFS.begin(
+            true
+        );
+
+
+    if (!littleFSReady)
+    {
+        Serial.println(
+            "ERROR: LittleFS initialization failed."
+        );
+
+        return;
+    }
+
+
+    Serial.println(
+        "LittleFS initialized."
+    );
+
+
+    // ==================================================
+    // CREATE OFFLINE DIRECTORY
+    // ==================================================
+
+    if (
+        !LittleFS.exists(
+            OFFLINE_DIRECTORY
+        )
+    )
+    {
+        if (
+            LittleFS.mkdir(
+                OFFLINE_DIRECTORY
+            )
+        )
+        {
+            Serial.println(
+                "Offline directory created."
+            );
+        }
+        else
+        {
+            Serial.println(
+                "ERROR: Failed to create offline directory."
+            );
+
+            return;
+        }
+    }
+    else
+    {
+        Serial.println(
+            "Offline directory already exists."
+        );
+    }
+
+
+    // ==================================================
+    // SCAN EXISTING RECORDS
+    // ==================================================
+
+    scanOfflineRecords();
+
+
+    // ==================================================
+    // RESTORE NEXT ID
+    // ==================================================
+
+    if (preferencesReady)
+    {
+        int storedNextID =
+            preferences.getInt(
+                "nextID",
+                0
+            );
+
+
+        if (
+            storedNextID > nextRecordID
+        )
+        {
+            nextRecordID =
+                storedNextID;
+        }
+
+
+        preferences.putInt(
+            "nextID",
+            nextRecordID
+        );
+    }
+
+
+    // ==================================================
+    // SUMMARY
+    // ==================================================
+
+    Serial.println();
+
     Serial.print(
-        "Offline records: "
+        "Offline records waiting: "
     );
 
     Serial.println(
-        getOfflineRecordCount()
+        offlineRecordCount
+    );
+
+
+    Serial.print(
+        "Next record ID: "
+    );
+
+    Serial.println(
+        nextRecordID
+    );
+
+
+    Serial.println(
+        "Storage initialization complete."
+    );
+
+
+    Serial.println(
+        "============================================"
     );
 }
 
 
 // ======================================================
-// LAST SEEN
+// SAVE LAST SEEN
 // ======================================================
 
 void saveLastSeen(
     const String &value
 )
 {
+    if (!preferencesReady)
+    {
+        Serial.println(
+            "ERROR: Preferences not ready."
+        );
+
+        return;
+    }
+
+
     preferences.putString(
         "lastSeen",
         value
     );
-}
 
 
-String loadLastSeen()
-{
-    return preferences.getString(
-        "lastSeen",
-        "No Last Seen"
+    Serial.println(
+        "Last seen saved to Preferences."
     );
 }
 
 
 // ======================================================
-// GET OFFLINE COUNT
+// LOAD LAST SEEN
 // ======================================================
 
-int getOfflineRecordCount()
+String loadLastSeen()
 {
-    return preferences.getInt(
-        "queueCount",
-        0
+    if (!preferencesReady)
+    {
+        return "";
+    }
+
+
+    return preferences.getString(
+        "lastSeen",
+        ""
     );
 }
 
@@ -88,87 +451,110 @@ int getOfflineRecordCount()
 // ======================================================
 // SAVE OFFLINE RECORD
 // ======================================================
-//
-// Saves the Firebase HISTORY payload.
-//
-// The record stays in storage until it is successfully
-// uploaded to Firebase.
-//
-// ======================================================
 
 bool saveOfflineRecord(
     const String &payload
 )
 {
-    int count =
-        getOfflineRecordCount();
-
-
-    // ==================================================
-    // QUEUE FULL
-    // ==================================================
-
-    if (
-        count >= MAX_OFFLINE_RECORDS
-    )
+    if (!littleFSReady)
     {
-        Serial.println();
         Serial.println(
-            "OFFLINE QUEUE FULL."
+            "ERROR: LittleFS is not ready."
         );
 
-        Serial.println(
-            "Dropping oldest record."
-        );
-
-
-        // Delete oldest record.
-        for (
-            int i = 0;
-            i < count - 1;
-            i++
-        )
-        {
-            String next =
-                preferences.getString(
-                    ("q" + String(i + 1)).c_str(),
-                    ""
-                );
-
-
-            preferences.putString(
-                ("q" + String(i)).c_str(),
-                next
-            );
-        }
-
-
-        count =
-            MAX_OFFLINE_RECORDS - 1;
+        return false;
     }
 
 
-    // ==================================================
-    // SAVE
-    // ==================================================
+    if (payload.length() == 0)
+    {
+        Serial.println(
+            "ERROR: Cannot save empty payload."
+        );
 
-    String key =
-        "q" + String(count);
+        return false;
+    }
+
+
+    int recordID =
+        nextRecordID;
+
+
+    String path =
+        getRecordPath(
+            recordID
+        );
+
+
+    Serial.println();
+    Serial.println(
+        "Saving offline record..."
+    );
+
+
+    Serial.print(
+        "File: "
+    );
+
+    Serial.println(
+        path
+    );
+
+
+    File file =
+        LittleFS.open(
+            path,
+            FILE_WRITE
+        );
+
+
+    if (!file)
+    {
+        Serial.println(
+            "ERROR: Failed to create offline file."
+        );
+
+        return false;
+    }
 
 
     size_t written =
-        preferences.putString(
-            key.c_str(),
+        file.print(
             payload
         );
 
 
+    file.flush();
+
+    file.close();
+
+
     if (
-        written == 0
+        written != payload.length()
     )
     {
         Serial.println(
-            "ERROR: Failed to save offline record."
+            "ERROR: Incomplete offline record write."
+        );
+
+
+        LittleFS.remove(
+            path
+        );
+
+
+        return false;
+    }
+
+
+    // ==================================================
+    // VERIFY FILE EXISTS
+    // ==================================================
+
+    if (!LittleFS.exists(path))
+    {
+        Serial.println(
+            "ERROR: Offline file does not exist after write."
         );
 
         return false;
@@ -176,21 +562,35 @@ bool saveOfflineRecord(
 
 
     // ==================================================
-    // UPDATE COUNT
+    // UPDATE COUNTERS
     // ==================================================
 
-    preferences.putInt(
-        "queueCount",
-        count + 1
+    offlineRecordCount++;
+
+    nextRecordID =
+        recordID + 1;
+
+
+    if (preferencesReady)
+    {
+        preferences.putInt(
+            "nextID",
+            nextRecordID
+        );
+    }
+
+
+    Serial.println(
+        "Offline record saved."
     );
 
 
     Serial.print(
-        "Offline record saved. Queue size: "
+        "Offline records waiting: "
     );
 
     Serial.println(
-        count + 1
+        offlineRecordCount
     );
 
 
@@ -199,34 +599,204 @@ bool saveOfflineRecord(
 
 
 // ======================================================
+// FIND OLDEST RECORD ID
+// ======================================================
+
+int findOldestRecordID()
+{
+    if (!littleFSReady)
+    {
+        return -1;
+    }
+
+
+    File directory =
+        LittleFS.open(
+            OFFLINE_DIRECTORY
+        );
+
+
+    if (!directory)
+    {
+        Serial.println(
+            "ERROR: Cannot open offline directory."
+        );
+
+        return -1;
+    }
+
+
+    int oldestID = -1;
+
+
+    File file =
+        directory.openNextFile();
+
+
+    while (file)
+    {
+        if (!file.isDirectory())
+        {
+            String filename =
+                file.name();
+
+
+            int id =
+                getRecordID(
+                    filename
+                );
+
+
+            if (id >= 0)
+            {
+                if (
+                    oldestID == -1 ||
+                    id < oldestID
+                )
+                {
+                    oldestID = id;
+                }
+            }
+        }
+
+
+        file.close();
+
+
+        file =
+            directory.openNextFile();
+    }
+
+
+    directory.close();
+
+
+    return oldestID;
+}
+
+
+// ======================================================
 // GET OFFLINE RECORD
+// ======================================================
+//
+// index 0 = oldest record
+//
 // ======================================================
 
 String getOfflineRecord(
     int index
 )
 {
-    int count =
-        getOfflineRecordCount();
-
-
-    if (
-        index < 0 ||
-        index >= count
-    )
+    if (!littleFSReady)
     {
         return "";
     }
 
 
-    String key =
-        "q" + String(index);
+    if (index < 0)
+    {
+        return "";
+    }
 
 
-    return preferences.getString(
-        key.c_str(),
-        ""
+    if (index >= offlineRecordCount)
+    {
+        return "";
+    }
+
+
+    // ==================================================
+    // Currently the queue only needs index 0.
+    //
+    // Find the oldest record directly.
+    // ==================================================
+
+    if (index != 0)
+    {
+        Serial.println(
+            "ERROR: Only index 0 is supported."
+        );
+
+        return "";
+    }
+
+
+    int oldestID =
+        findOldestRecordID();
+
+
+    if (oldestID < 0)
+    {
+        Serial.println(
+            "ERROR: No offline record found."
+        );
+
+        return "";
+    }
+
+
+    String path =
+        getRecordPath(
+            oldestID
+        );
+
+
+    Serial.print(
+        "Reading offline record: "
     );
+
+    Serial.println(
+        path
+    );
+
+
+    File file =
+        LittleFS.open(
+            path,
+            FILE_READ
+        );
+
+
+    if (!file)
+    {
+        Serial.println(
+            "ERROR: Failed to open offline record."
+        );
+
+        return "";
+    }
+
+
+    String payload =
+        file.readString();
+
+
+    file.close();
+
+
+    payload.trim();
+
+
+    if (payload.length() == 0)
+    {
+        Serial.println(
+            "ERROR: Offline record is empty."
+        );
+
+        return "";
+    }
+
+
+    Serial.print(
+        "Offline payload loaded: "
+    );
+
+    Serial.println(
+        payload
+    );
+
+
+    return payload;
 }
 
 
@@ -234,8 +804,7 @@ String getOfflineRecord(
 // DELETE OFFLINE RECORD
 // ======================================================
 //
-// Deletes one record and shifts all newer records
-// forward.
+// index 0 = oldest record
 //
 // ======================================================
 
@@ -243,59 +812,114 @@ bool deleteOfflineRecord(
     int index
 )
 {
-    int count =
-        getOfflineRecordCount();
-
-
-    if (
-        index < 0 ||
-        index >= count
-    )
+    if (!littleFSReady)
     {
         return false;
     }
 
 
-    // ==================================================
-    // SHIFT RECORDS
-    // ==================================================
-
-    for (
-        int i = index;
-        i < count - 1;
-        i++
-    )
+    if (index != 0)
     {
-        String next =
-            preferences.getString(
-                ("q" + String(i + 1)).c_str(),
-                ""
-            );
-
-
-        preferences.putString(
-            ("q" + String(i)).c_str(),
-            next
+        Serial.println(
+            "ERROR: Only index 0 is supported."
         );
+
+        return false;
+    }
+
+
+    if (offlineRecordCount <= 0)
+    {
+        Serial.println(
+            "ERROR: No offline records to delete."
+        );
+
+        return false;
     }
 
 
     // ==================================================
-    // REMOVE LAST ENTRY
+    // FIND OLDEST RECORD
     // ==================================================
 
-    preferences.remove(
-        ("q" + String(count - 1)).c_str()
+    int oldestID =
+        findOldestRecordID();
+
+
+    if (oldestID < 0)
+    {
+        Serial.println(
+            "ERROR: Could not identify oldest offline record."
+        );
+
+        return false;
+    }
+
+
+    String path =
+        getRecordPath(
+            oldestID
+        );
+
+
+    Serial.print(
+        "Deleting offline record: "
     );
+
+    Serial.println(
+        path
+    );
+
+
+    // ==================================================
+    // VERIFY FILE EXISTS
+    // ==================================================
+
+    if (!LittleFS.exists(path))
+    {
+        Serial.println(
+            "ERROR: Offline file does not exist."
+        );
+
+        return false;
+    }
+
+
+    // ==================================================
+    // DELETE
+    // ==================================================
+
+    if (!LittleFS.remove(path))
+    {
+        Serial.println(
+            "ERROR: Failed to delete offline record."
+        );
+
+        return false;
+    }
 
 
     // ==================================================
     // UPDATE COUNT
     // ==================================================
 
-    preferences.putInt(
-        "queueCount",
-        count - 1
+    if (offlineRecordCount > 0)
+    {
+        offlineRecordCount--;
+    }
+
+
+    Serial.println(
+        "Offline record deleted successfully."
+    );
+
+
+    Serial.print(
+        "Offline records remaining: "
+    );
+
+    Serial.println(
+        offlineRecordCount
     );
 
 
@@ -304,34 +928,170 @@ bool deleteOfflineRecord(
 
 
 // ======================================================
-// CLEAR OFFLINE RECORDS
+// GET OFFLINE RECORD COUNT
 // ======================================================
 
-void clearOfflineRecords()
+int getOfflineRecordCount()
 {
-    int count =
-        getOfflineRecordCount();
+    return offlineRecordCount;
+}
 
 
-    for (
-        int i = 0;
-        i < count;
-        i++
-    )
+// ======================================================
+// GENERIC STRING
+// ======================================================
+
+void saveString(
+    const char *key,
+    const String &value
+)
+{
+    if (!preferencesReady)
     {
-        preferences.remove(
-            ("q" + String(i)).c_str()
-        );
+        return;
+    }
+
+
+    preferences.putString(
+        key,
+        value
+    );
+}
+
+
+String loadString(
+    const char *key,
+    const String &defaultValue
+)
+{
+    if (!preferencesReady)
+    {
+        return defaultValue;
+    }
+
+
+    return preferences.getString(
+        key,
+        defaultValue
+    );
+}
+
+
+// ======================================================
+// GENERIC FLOAT
+// ======================================================
+
+void saveFloat(
+    const char *key,
+    float value
+)
+{
+    if (!preferencesReady)
+    {
+        return;
+    }
+
+
+    preferences.putFloat(
+        key,
+        value
+    );
+}
+
+
+float loadFloat(
+    const char *key,
+    float defaultValue
+)
+{
+    if (!preferencesReady)
+    {
+        return defaultValue;
+    }
+
+
+    return preferences.getFloat(
+        key,
+        defaultValue
+    );
+}
+
+
+// ======================================================
+// GENERIC INT
+// ======================================================
+
+void saveInt(
+    const char *key,
+    int value
+)
+{
+    if (!preferencesReady)
+    {
+        return;
     }
 
 
     preferences.putInt(
-        "queueCount",
-        0
+        key,
+        value
     );
+}
 
 
-    Serial.println(
-        "Offline queue cleared."
+int loadInt(
+    const char *key,
+    int defaultValue
+)
+{
+    if (!preferencesReady)
+    {
+        return defaultValue;
+    }
+
+
+    return preferences.getInt(
+        key,
+        defaultValue
+    );
+}
+
+
+// ======================================================
+// GENERIC BOOL
+// ======================================================
+
+void saveBool(
+    const char *key,
+    bool value
+)
+{
+    if (!preferencesReady)
+    {
+        return;
+    }
+
+
+    preferences.putBool(
+        key,
+        value
+    );
+}
+
+
+bool loadBool(
+    const char *key,
+    bool defaultValue
+)
+{
+    if (!preferencesReady)
+    {
+        return defaultValue;
+    }
+
+
+    return preferences.getBool(
+        key,
+        defaultValue
     );
 }

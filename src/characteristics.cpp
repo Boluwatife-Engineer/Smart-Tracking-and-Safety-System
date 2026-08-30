@@ -5,155 +5,293 @@
 #include "storage.h"
 #include "uuids.h"
 
+
 NimBLECharacteristic *motionChar;
+
 NimBLECharacteristic *lastSeenChar;
 
+
 NimBLECharacteristic *accelXChar;
+
 NimBLECharacteristic *accelYChar;
+
 NimBLECharacteristic *accelZChar;
 
+
 NimBLECharacteristic *gyroXChar;
+
 NimBLECharacteristic *gyroYChar;
+
 NimBLECharacteristic *gyroZChar;
 
+
 NimBLECharacteristic *batteryChar;
+
 NimBLECharacteristic *buzzerChar;
 
+
 NimBLECharacteristic *gpsLatitudeChar;
+
 NimBLECharacteristic *gpsLongitudeChar;
+
 NimBLECharacteristic *gpsAltitudeChar;
+
 NimBLECharacteristic *gpsTimeChar;
+
 NimBLECharacteristic *gpsStatusChar;
 
-void createCharacteristics(NimBLEService *service)
+
+NimBLECharacteristic *sosChar;
+
+
+// ======================================================
+// CREATE CHARACTERISTICS
+// ======================================================
+
+void createCharacteristics(
+    NimBLEService *service
+)
 {
-    //================ MOTION =================//
+    // ==================================================
+    // MOTION
+    // ==================================================
 
     motionChar =
         service->createCharacteristic(
             MOTION_UUID,
             NIMBLE_PROPERTY::READ |
-                NIMBLE_PROPERTY::NOTIFY);
+            NIMBLE_PROPERTY::NOTIFY
+        );
 
-    //================ LAST SEEN =================//
+
+    // ==================================================
+    // LAST SEEN
+    // ==================================================
 
     lastSeenChar =
         service->createCharacteristic(
             LAST_SEEN_UUID,
             NIMBLE_PROPERTY::READ |
-                NIMBLE_PROPERTY::WRITE);
+            NIMBLE_PROPERTY::WRITE
+        );
+
 
     lastSeenChar->setCallbacks(
-        new LastSeenCallbacks());
+        new LastSeenCallbacks()
+    );
 
-    String savedLastSeen = loadLastSeen();
+
+    String savedLastSeen =
+        loadLastSeen();
+
 
     lastSeenChar->setValue(
-        savedLastSeen.c_str());
+        savedLastSeen.c_str()
+    );
 
-    //================ BATTERY =================//
+
+    // ==================================================
+    // BATTERY
+    // ==================================================
 
     batteryChar =
         service->createCharacteristic(
             BATTERY_UUID,
             NIMBLE_PROPERTY::READ |
-                NIMBLE_PROPERTY::NOTIFY);
+            NIMBLE_PROPERTY::NOTIFY
+        );
 
-    uint8_t level = getBatteryLevel();
 
-    batteryChar->setValue(&level, 1);
+    uint8_t level =
+        getBatteryLevel();
 
-    //================ ACCELEROMETER =================//
+
+    batteryChar->setValue(
+        &level,
+        1
+    );
+
+
+    // ==================================================
+    // ACCELEROMETER
+    // ==================================================
 
     accelXChar =
         service->createCharacteristic(
             ACCEL_X_UUID,
             NIMBLE_PROPERTY::READ |
-                NIMBLE_PROPERTY::NOTIFY);
+            NIMBLE_PROPERTY::NOTIFY
+        );
+
 
     accelYChar =
         service->createCharacteristic(
             ACCEL_Y_UUID,
             NIMBLE_PROPERTY::READ |
-                NIMBLE_PROPERTY::NOTIFY);
+            NIMBLE_PROPERTY::NOTIFY
+        );
+
 
     accelZChar =
         service->createCharacteristic(
             ACCEL_Z_UUID,
             NIMBLE_PROPERTY::READ |
-                NIMBLE_PROPERTY::NOTIFY);
+            NIMBLE_PROPERTY::NOTIFY
+        );
 
-    //================ GYROSCOPE =================//
+
+    // ==================================================
+    // GYROSCOPE
+    // ==================================================
 
     gyroXChar =
         service->createCharacteristic(
             GYRO_X_UUID,
             NIMBLE_PROPERTY::READ |
-                NIMBLE_PROPERTY::NOTIFY);
+            NIMBLE_PROPERTY::NOTIFY
+        );
+
 
     gyroYChar =
         service->createCharacteristic(
             GYRO_Y_UUID,
             NIMBLE_PROPERTY::READ |
-                NIMBLE_PROPERTY::NOTIFY);
+            NIMBLE_PROPERTY::NOTIFY
+        );
+
 
     gyroZChar =
         service->createCharacteristic(
             GYRO_Z_UUID,
             NIMBLE_PROPERTY::READ |
-                NIMBLE_PROPERTY::NOTIFY);
+            NIMBLE_PROPERTY::NOTIFY
+        );
 
-    //================ BUZZER =================//
+
+    // ==================================================
+    // BUZZER
+    // ==================================================
 
     buzzerChar =
         service->createCharacteristic(
             BUZZER_UUID,
             NIMBLE_PROPERTY::READ |
-                NIMBLE_PROPERTY::WRITE);
+            NIMBLE_PROPERTY::WRITE
+        );
+
 
     buzzerChar->setCallbacks(
-        new BuzzerCallbacks());
+        new BuzzerCallbacks()
+    );
 
-    buzzerChar->setValue("OFF");
+
+    buzzerChar->setValue(
+        "OFF"
+    );
+
+
+    // ==================================================
+    // GPS LATITUDE
+    // ==================================================
 
     gpsLatitudeChar =
-    service->createCharacteristic(
-        GPS_LATITUDE_UUID,
-        NIMBLE_PROPERTY::READ |
-        NIMBLE_PROPERTY::NOTIFY
+        service->createCharacteristic(
+            GPS_LATITUDE_UUID,
+            NIMBLE_PROPERTY::READ |
+            NIMBLE_PROPERTY::NOTIFY
+        );
+
+
+    // ==================================================
+    // GPS LONGITUDE
+    // ==================================================
+
+    gpsLongitudeChar =
+        service->createCharacteristic(
+            GPS_LONGITUDE_UUID,
+            NIMBLE_PROPERTY::READ |
+            NIMBLE_PROPERTY::NOTIFY
+        );
+
+
+    // ==================================================
+    // GPS ALTITUDE
+    // ==================================================
+
+    gpsAltitudeChar =
+        service->createCharacteristic(
+            GPS_ALTITUDE_UUID,
+            NIMBLE_PROPERTY::READ |
+            NIMBLE_PROPERTY::NOTIFY
+        );
+
+
+    // ==================================================
+    // GPS TIME
+    // ==================================================
+
+    gpsTimeChar =
+        service->createCharacteristic(
+            GPS_TIME_UUID,
+            NIMBLE_PROPERTY::READ |
+            NIMBLE_PROPERTY::NOTIFY
+        );
+
+
+    // ==================================================
+    // GPS STATUS
+    // ==================================================
+
+    gpsStatusChar =
+        service->createCharacteristic(
+            GPS_STATUS_UUID,
+            NIMBLE_PROPERTY::READ |
+            NIMBLE_PROPERTY::NOTIFY
+        );
+
+
+    // ==================================================
+    // SOS
+    // ==================================================
+
+    sosChar =
+        service->createCharacteristic(
+            SOS_UUID,
+            NIMBLE_PROPERTY::READ |
+            NIMBLE_PROPERTY::NOTIFY
+        );
+
+
+    // ==================================================
+    // INITIAL GPS VALUES
+    // ==================================================
+
+    gpsLatitudeChar->setValue(
+        "--"
     );
 
-gpsLongitudeChar =
-    service->createCharacteristic(
-        GPS_LONGITUDE_UUID,
-        NIMBLE_PROPERTY::READ |
-        NIMBLE_PROPERTY::NOTIFY
+    gpsLongitudeChar->setValue(
+        "--"
     );
 
-gpsAltitudeChar =
-    service->createCharacteristic(
-        GPS_ALTITUDE_UUID,
-        NIMBLE_PROPERTY::READ |
-        NIMBLE_PROPERTY::NOTIFY
+    gpsAltitudeChar->setValue(
+        "--"
     );
 
-gpsTimeChar =
-    service->createCharacteristic(
-        GPS_TIME_UUID,
-        NIMBLE_PROPERTY::READ |
-        NIMBLE_PROPERTY::NOTIFY
+    gpsTimeChar->setValue(
+        "--"
     );
 
-gpsStatusChar =
-    service->createCharacteristic(
-        GPS_STATUS_UUID,
-        NIMBLE_PROPERTY::READ |
-        NIMBLE_PROPERTY::NOTIFY
+    gpsStatusChar->setValue(
+        "SEARCHING"
     );
 
-gpsLatitudeChar->setValue("--");
-gpsLongitudeChar->setValue("--");
-gpsAltitudeChar->setValue("--");
-gpsTimeChar->setValue("--");
-gpsStatusChar->setValue("SEARCHING");
+
+    // ==================================================
+    // INITIAL SOS VALUE
+    // ==================================================
+
+    sosChar->setValue(
+        "INACTIVE"
+    );
 }
