@@ -35,6 +35,8 @@ bool deleteOfflineRecord(int index);
 
 int getOfflineRecordCount();
 
+bool clearAllOfflineRecords();
+
 
 // ======================================================
 // OPTIONAL PERSISTENT SETTINGS

@@ -8,17 +8,7 @@
 #include "sos.h"
 #include "gps.h"
 
-
-// ======================================================
-// GSM STATE
-// ======================================================
-
 bool gsmReady = false;
-
-
-// ======================================================
-// FIREBASE URLS
-// ======================================================
 
 const char *historyURL =
     "https://smart-trackerr-default-rtdb.firebaseio.com/Trackers/tracker_001/history.json";
@@ -32,139 +22,87 @@ const char *statusURL =
 const char *sosURL =
     "https://smart-trackerr-default-rtdb.firebaseio.com/Trackers/tracker_001/sos.json";
 
-
-// ======================================================
-// OFFLINE QUEUE CONTROL
-// ======================================================
-
 unsigned long lastOfflineSync = 0;
-
 const unsigned long OFFLINE_SYNC_INTERVAL = 10000;
-
-
-// ======================================================
-// SOS UPLOAD CONTROL
-// ======================================================
 
 static bool sosEventPending = false;
 
 
-// ======================================================
-// INITIALIZE GSM
-// ======================================================
+/* =========================================================
+   GSM INITIALIZATION
+   ========================================================= */
 
 void initGSM()
 {
     Serial.println();
-    Serial.println(
-        "========== GSM INITIALIZATION =========="
-    );
+    Serial.println("========== GSM INITIALIZATION ==========");
 
+    /*
+       Storage is initialized during startup.
 
-    // ==================================================
-    // STORAGE
-    // ==================================================
+       DO NOT call initStorage() here again.
+       Calling it twice causes the Preferences
+       initialization warning seen previously.
+    */
 
-    initStorage();
+    sendSIM7600Command("AT+CPIN?", 1000);
+    sendSIM7600Command("AT+CSQ", 1000);
+    sendSIM7600Command("AT+CEREG?", 1000);
+    sendSIM7600Command("AT+CGATT?", 1000);
 
-
-    // ==================================================
-    // SIM
-    // ==================================================
-
-    sendSIM7600Command(
-        "AT+CPIN?",
-        1000
-    );
-
-
-    // ==================================================
-    // SIGNAL
-    // ==================================================
-
-    sendSIM7600Command(
-        "AT+CSQ",
-        1000
-    );
-
-
-    // ==================================================
-    // NETWORK
-    // ==================================================
-
-    sendSIM7600Command(
-        "AT+CEREG?",
-        1000
-    );
-
-
-    // ==================================================
-    // ATTACH
-    // ==================================================
-
-    sendSIM7600Command(
-        "AT+CGATT?",
-        1000
-    );
-
-
-    // ==================================================
-    // APN
-    // ==================================================
+    /*
+       MTN Nigeria APN.
+    */
 
     sendSIM7600Command(
         "AT+CGDCONT=1,\"IP\",\"web.gprs.mtnnigeria.net\"",
         1000
     );
 
-
-    // ==================================================
-    // ACTIVATE PDP
-    // ==================================================
-
-    sendSIM7600Command(
-        "AT+CGACT=1,1",
-        5000
-    );
+    sendSIM7600Command("AT+CGACT=1,1", 10000);
+    sendSIM7600Command("AT+CGPADDR=1", 3000);
 
 
-    // ==================================================
-    // GET IP
-    // ==================================================
-
-    sendSIM7600Command(
-        "AT+CGPADDR=1",
-        2000
-    );
-
-
-    // ==================================================
-    // SSL
-    // ==================================================
+    /* =====================================================
+       SSL CONFIGURATION
+       ===================================================== */
 
     Serial.println();
-    Serial.println(
-        "========== SSL CONFIGURATION =========="
-    );
+    Serial.println("========== SSL CONFIGURATION ==========");
 
+    /*
+       SSL context 0.
+
+       sslversion = 4 means "All".
+
+       authmode = 0 means no certificate authentication.
+
+       ignorelocaltime = 1 prevents certificate time checking
+       from becoming a problem while the modem RTC is not
+       synchronized.
+
+       enableSNI = 1 enables Server Name Indication.
+    */
 
     sendSIM7600Command(
         "AT+CSSLCFG=\"sslversion\",0,4",
         2000
     );
 
+    sendSIM7600Command(
+        "AT+CSSLCFG=\"authmode\",0,0",
+        2000
+    );
 
     sendSIM7600Command(
         "AT+CSSLCFG=\"ignorelocaltime\",0,1",
         2000
     );
 
-
     sendSIM7600Command(
-        "AT+CSSLCFG=\"seclevel\",0,0",
+        "AT+CSSLCFG=\"enableSNI\",0,1",
         2000
     );
-
 
     sendSIM7600Command(
         "AT+CSSLCFG?",
@@ -172,35 +110,21 @@ void initGSM()
     );
 
 
-    // ==================================================
-    // READY
-    // ==================================================
-
     gsmReady = true;
 
-
     Serial.println();
-    Serial.println(
-        "GSM initialization complete."
-    );
+    Serial.println("GSM initialization complete.");
 
-
-    Serial.print(
-        "Offline records waiting: "
-    );
-
-    Serial.println(
-        getOfflineRecordCount()
-    );
-
+    Serial.print("Offline records waiting: ");
+    Serial.println(getOfflineRecordCount());
 
     Serial.println();
 }
 
 
-// ======================================================
-// GSM STATUS
-// ======================================================
+/* =========================================================
+   STATUS
+   ========================================================= */
 
 bool isGSMReady()
 {
@@ -208,9 +132,9 @@ bool isGSMReady()
 }
 
 
-// ======================================================
-// WAIT FOR RESPONSE
-// ======================================================
+/* =========================================================
+   WAIT FOR MODEM RESPONSE
+   ========================================================= */
 
 bool waitForResponse(
     const char *expected,
@@ -219,113 +143,80 @@ bool waitForResponse(
 {
     String response = "";
 
-    unsigned long start =
-        millis();
+    unsigned long start = millis();
 
-
-    while (
-        millis() - start < timeout
-    )
+    while (millis() - start < timeout)
     {
-        while (
-            sim7600.available()
-        )
+        while (sim7600.available())
         {
-            char c =
-                (char)sim7600.read();
-
+            char c = (char)sim7600.read();
 
             response += c;
 
             Serial.write(c);
 
-
-            if (
-                response.indexOf(
-                    expected
-                ) != -1
-            )
+            if (response.indexOf(expected) != -1)
             {
                 return true;
             }
         }
+
+        delay(10);
     }
 
+    Serial.print("Timeout waiting for: ");
+    Serial.println(expected);
 
     return false;
 }
 
 
-// ======================================================
-// CHECK NETWORK
-// ======================================================
+/* =========================================================
+   NETWORK CHECK
+   ========================================================= */
 
 bool hasNetworkConnection()
 {
     if (!gsmReady)
     {
+        Serial.println("GSM is not ready.");
         return false;
     }
 
 
-    // ==================================================
-    // CLEAR UART
-    // ==================================================
+    /* -----------------------------------------------------
+       CHECK NETWORK REGISTRATION
+       ----------------------------------------------------- */
 
-    while (
-        sim7600.available()
-    )
-    {
+    while (sim7600.available())
         sim7600.read();
-    }
 
-
-    // ==================================================
-    // CEREG
-    // ==================================================
-
-    sim7600.println(
-        "AT+CEREG?"
-    );
-
+    sim7600.println("AT+CEREG?");
 
     String cereg = "";
 
-    unsigned long start =
-        millis();
+    unsigned long start = millis();
 
-
-    while (
-        millis() - start < 2000
-    )
+    while (millis() - start < 3000)
     {
-        while (
-            sim7600.available()
-        )
+        while (sim7600.available())
         {
-            char c =
-                (char)sim7600.read();
+            char c = (char)sim7600.read();
 
             cereg += c;
+
+            Serial.write(c);
         }
 
-
-        if (
-            cereg.indexOf("OK") != -1
-        )
-        {
+        if (cereg.indexOf("OK") != -1)
             break;
-        }
+
+        delay(10);
     }
 
-
-    Serial.print(
-        "CEREG: "
-    );
-
-    Serial.println(
-        cereg
-    );
+    Serial.println();
+    Serial.print("CEREG RESPONSE: ");
+    Serial.println(cereg);
 
 
     bool registered =
@@ -339,169 +230,302 @@ bool hasNetworkConnection()
 
     if (!registered)
     {
-        Serial.println(
-            "Network NOT registered."
-        );
-
+        Serial.println("Network NOT registered.");
         return false;
     }
 
+    Serial.println("Cellular network registered.");
 
-    // ==================================================
-    // CGATT
-    // ==================================================
 
-    while (
-        sim7600.available()
-    )
-    {
+    /* -----------------------------------------------------
+       CHECK PACKET ATTACHMENT
+       ----------------------------------------------------- */
+
+    while (sim7600.available())
         sim7600.read();
-    }
 
-
-    sim7600.println(
-        "AT+CGATT?"
-    );
-
+    sim7600.println("AT+CGATT?");
 
     String cgatt = "";
 
-    start =
-        millis();
+    start = millis();
 
-
-    while (
-        millis() - start < 2000
-    )
+    while (millis() - start < 3000)
     {
-        while (
-            sim7600.available()
-        )
+        while (sim7600.available())
         {
-            char c =
-                (char)sim7600.read();
+            char c = (char)sim7600.read();
 
             cgatt += c;
+
+            Serial.write(c);
         }
 
-
-        if (
-            cgatt.indexOf("OK") != -1
-        )
-        {
+        if (cgatt.indexOf("OK") != -1)
             break;
-        }
+
+        delay(10);
     }
 
-
-    Serial.print(
-        "CGATT: "
-    );
-
-    Serial.println(
-        cgatt
-    );
+    Serial.println();
+    Serial.print("CGATT RESPONSE: ");
+    Serial.println(cgatt);
 
 
-    if (
-        cgatt.indexOf("+CGATT: 1") == -1
-    )
+    if (cgatt.indexOf("+CGATT: 1") == -1)
     {
+        Serial.println("Packet domain NOT attached.");
+        Serial.println("Attempting CGATT=1");
+
+        while (sim7600.available())
+            sim7600.read();
+
+        sim7600.println("AT+CGATT=1");
+
+        if (!waitForResponse("OK", 15000))
+        {
+            Serial.println("ERROR: CGATT=1 failed.");
+            return false;
+        }
+
         Serial.println(
-            "Packet domain NOT attached."
+            "Packet domain attachment requested."
         );
 
-        return false;
+        delay(1000);
+
+        while (sim7600.available())
+            sim7600.read();
+
+        sim7600.println("AT+CGATT?");
+
+        cgatt = "";
+
+        start = millis();
+
+        while (millis() - start < 3000)
+        {
+            while (sim7600.available())
+            {
+                char c = (char)sim7600.read();
+
+                cgatt += c;
+
+                Serial.write(c);
+            }
+
+            if (cgatt.indexOf("OK") != -1)
+                break;
+
+            delay(10);
+        }
+
+        Serial.println();
+        Serial.print("CGATT RECHECK: ");
+        Serial.println(cgatt);
+
+
+        if (cgatt.indexOf("+CGATT: 1") == -1)
+        {
+            Serial.println(
+                "ERROR: Packet domain still not attached."
+            );
+
+            return false;
+        }
+
+        Serial.println("Packet domain attached.");
     }
-
-
-    // ==================================================
-    // CGACT
-    // ==================================================
-
-    while (
-        sim7600.available()
-    )
+    else
     {
-        sim7600.read();
+        Serial.println(
+            "Packet domain already attached."
+        );
     }
 
 
-    sim7600.println(
-        "AT+CGACT?"
-    );
+    /* -----------------------------------------------------
+       CHECK PDP CONTEXT
+       ----------------------------------------------------- */
 
+    while (sim7600.available())
+        sim7600.read();
+
+    sim7600.println("AT+CGACT?");
 
     String cgact = "";
 
-    start =
-        millis();
+    start = millis();
 
-
-    while (
-        millis() - start < 2000
-    )
+    while (millis() - start < 3000)
     {
-        while (
-            sim7600.available()
-        )
+        while (sim7600.available())
         {
-            char c =
-                (char)sim7600.read();
+            char c = (char)sim7600.read();
 
             cgact += c;
+
+            Serial.write(c);
         }
 
-
-        if (
-            cgact.indexOf("OK") != -1
-        )
-        {
+        if (cgact.indexOf("OK") != -1)
             break;
-        }
+
+        delay(10);
     }
 
-
-    Serial.print(
-        "CGACT: "
-    );
-
-    Serial.println(
-        cgact
-    );
+    Serial.println();
+    Serial.print("CGACT RESPONSE: ");
+    Serial.println(cgact);
 
 
-    if (
-        cgact.indexOf("+CGACT: 1,1") == -1
-    )
+    if (cgact.indexOf("+CGACT: 1,1") == -1)
     {
         Serial.println(
-            "PDP context is NOT active."
+            "PDP context 1 is NOT active."
         );
 
-        return false;
+        Serial.println(
+            "Attempting to activate PDP context..."
+        );
+
+        while (sim7600.available())
+            sim7600.read();
+
+        sim7600.println(
+            "AT+CGDCONT=1,\"IP\",\"web.gprs.mtnnigeria.net\""
+        );
+
+        if (!waitForResponse("OK", 3000))
+        {
+            Serial.println(
+                "WARNING: APN configuration did not return OK."
+            );
+        }
+
+        while (sim7600.available())
+            sim7600.read();
+
+        sim7600.println("AT+CGACT=1,1");
+
+        if (!waitForResponse("OK", 15000))
+        {
+            Serial.println(
+                "ERROR: PDP activation failed."
+            );
+
+            return false;
+        }
+
+        Serial.println(
+            "PDP context activation requested."
+        );
+
+        delay(1000);
+
+        while (sim7600.available())
+            sim7600.read();
+
+        sim7600.println("AT+CGACT?");
+
+        cgact = "";
+
+        start = millis();
+
+        while (millis() - start < 3000)
+        {
+            while (sim7600.available())
+            {
+                char c = (char)sim7600.read();
+
+                cgact += c;
+
+                Serial.write(c);
+            }
+
+            if (cgact.indexOf("OK") != -1)
+                break;
+
+            delay(10);
+        }
+
+        Serial.println();
+        Serial.print("CGACT RECHECK: ");
+        Serial.println(cgact);
+
+
+        if (cgact.indexOf("+CGACT: 1,1") == -1)
+        {
+            Serial.println(
+                "ERROR: PDP context is still inactive."
+            );
+
+            return false;
+        }
+
+        Serial.println(
+            "PDP context successfully activated."
+        );
+    }
+    else
+    {
+        Serial.println(
+            "PDP context already active."
+        );
     }
 
 
-    Serial.println(
-        "NETWORK AVAILABLE."
-    );
+    /* -----------------------------------------------------
+       GET IP ADDRESS
+       ----------------------------------------------------- */
 
+    while (sim7600.available())
+        sim7600.read();
+
+    sim7600.println("AT+CGPADDR=1");
+
+    String ipResponse = "";
+
+    start = millis();
+
+    while (millis() - start < 3000)
+    {
+        while (sim7600.available())
+        {
+            char c = (char)sim7600.read();
+
+            ipResponse += c;
+
+            Serial.write(c);
+        }
+
+        if (ipResponse.indexOf("OK") != -1)
+            break;
+
+        delay(10);
+    }
+
+    Serial.println();
+    Serial.print("IP RESPONSE: ");
+    Serial.println(ipResponse);
+
+
+    if (ipResponse.indexOf("+CGPADDR: 1,") == -1)
+    {
+        Serial.println(
+            "WARNING: No IP address reported."
+        );
+    }
+
+    Serial.println("NETWORK AVAILABLE.");
 
     return true;
 }
 
 
-// ======================================================
-// FIREBASE HTTP REQUEST
-// ======================================================
-//
-// method:
-//
-// 1 = POST
-// 2 = PUT
-//
-// ======================================================
+/* =========================================================
+   FIREBASE HTTP REQUEST
+   ========================================================= */
 
 bool sendFirebaseRequest(
     const char *url,
@@ -511,112 +535,67 @@ bool sendFirebaseRequest(
 {
     if (!gsmReady)
     {
-        Serial.println(
-            "GSM is not ready."
-        );
-
+        Serial.println("GSM is not ready.");
         return false;
     }
 
 
     Serial.println();
-    Serial.println(
-        "================================"
-    );
+    Serial.println("================================");
+    Serial.println("FIREBASE REQUEST");
+    Serial.println("================================");
 
-    Serial.println(
-        "FIREBASE REQUEST"
-    );
+    Serial.print("URL: ");
+    Serial.println(url);
 
-    Serial.println(
-        "================================"
-    );
+    Serial.print("Payload: ");
+    Serial.println(payload);
 
-
-    Serial.print(
-        "URL: "
-    );
-
-    Serial.println(
-        url
-    );
-
-
-    Serial.print(
-        "Payload: "
-    );
-
-    Serial.println(
-        payload
-    );
+    Serial.print("Payload length: ");
+    Serial.println(payload.length());
 
 
     if (method == 1)
     {
-        Serial.println(
-            "Method: POST"
-        );
+        Serial.println("Method: POST");
     }
     else
     {
-        Serial.println(
-            "Method: PUT"
-        );
-
+        Serial.println("Method: PUT");
         Serial.println(
             "Transport: POST + X-HTTP-Method-Override"
         );
     }
 
 
-    // ==================================================
-    // CLEAR UART
-    // ==================================================
+    /* -----------------------------------------------------
+       TERMINATE PREVIOUS HTTP SESSION
+       ----------------------------------------------------- */
 
-    while (
-        sim7600.available()
-    )
-    {
+    while (sim7600.available())
         sim7600.read();
-    }
 
-
-    // ==================================================
-    // TERMINATE PREVIOUS SESSION
-    // ==================================================
-
-    sim7600.println(
-        "AT+HTTPTERM"
-    );
+    sim7600.println("AT+HTTPTERM");
 
     delay(300);
 
-
-    while (
-        sim7600.available()
-    )
+    while (sim7600.available())
     {
-        Serial.write(
-            sim7600.read()
-        );
+        Serial.write(sim7600.read());
     }
 
 
-    // ==================================================
-    // INIT HTTP
-    // ==================================================
+    /* -----------------------------------------------------
+       HTTP INIT
+       ----------------------------------------------------- */
 
-    sim7600.println(
-        "AT+HTTPINIT"
+    Serial.println(
+        "Initializing HTTP..."
     );
 
+    sim7600.println("AT+HTTPINIT");
 
-    if (
-        !waitForResponse(
-            "OK",
-            3000
-        )
-    )
+    if (!waitForResponse("OK", 5000))
     {
         Serial.println(
             "ERROR: HTTPINIT failed."
@@ -626,201 +605,209 @@ bool sendFirebaseRequest(
     }
 
 
-    // ==================================================
-    // CID
-    // ==================================================
+    /* -----------------------------------------------------
+       CID
+       ----------------------------------------------------- */
+
+    Serial.println(
+        "Setting CID..."
+    );
 
     sim7600.println(
         "AT+HTTPPARA=\"CID\",1"
     );
 
-
-    if (
-        !waitForResponse(
-            "OK",
-            3000
-        )
-    )
+    if (!waitForResponse("OK", 3000))
     {
         Serial.println(
-            "ERROR: CID failed."
+            "ERROR: HTTP CID configuration failed."
         );
 
-        sim7600.println(
-            "AT+HTTPTERM"
-        );
+        sim7600.println("AT+HTTPTERM");
+
+        delay(300);
 
         return false;
     }
 
 
-    // ==================================================
-    // URL
-    // ==================================================
+    /* -----------------------------------------------------
+       URL
+       ----------------------------------------------------- */
+
+    Serial.println(
+        "Setting URL..."
+    );
 
     String urlCommand =
         "AT+HTTPPARA=\"URL\",\"";
 
-
     urlCommand += url;
-
     urlCommand += "\"";
 
+    sim7600.println(urlCommand);
 
-    sim7600.println(
-        urlCommand
-    );
-
-
-    if (
-        !waitForResponse(
-            "OK",
-            5000
-        )
-    )
+    if (!waitForResponse("OK", 5000))
     {
         Serial.println(
             "ERROR: URL setup failed."
         );
 
-        sim7600.println(
-            "AT+HTTPTERM"
-        );
+        sim7600.println("AT+HTTPTERM");
+
+        delay(300);
 
         return false;
     }
 
 
-    // ==================================================
-    // CONTENT TYPE
-    // ==================================================
+    /* -----------------------------------------------------
+       HTTPS / SSL
+       -----------------------------------------------------
+
+       DO NOT SEND:
+
+       AT+HTTPPARA="SSLCFG","0"
+
+       Your SIM7600 firmware rejects that command.
+
+       SSL context 0 is already configured using:
+
+       AT+CSSLCFG="sslversion",0,4
+       AT+CSSLCFG="authmode",0,0
+       AT+CSSLCFG="ignorelocaltime",0,1
+       AT+CSSLCFG="enableSNI",0,1
+
+       HTTPS is therefore used directly through the
+       https:// Firebase URL.
+    */
+
+
+    /* -----------------------------------------------------
+       CONTENT TYPE
+       ----------------------------------------------------- */
+
+    Serial.println(
+        "Setting content type..."
+    );
 
     sim7600.println(
         "AT+HTTPPARA=\"CONTENT\",\"application/json\""
     );
 
-
-    if (
-        !waitForResponse(
-            "OK",
-            3000
-        )
-    )
+    if (!waitForResponse("OK", 3000))
     {
         Serial.println(
-            "ERROR: Content type failed."
+            "ERROR: Content type configuration failed."
         );
 
-        sim7600.println(
-            "AT+HTTPTERM"
-        );
+        sim7600.println("AT+HTTPTERM");
+
+        delay(300);
 
         return false;
     }
 
 
-    // ==================================================
-    // PUT OVERRIDE
-    // ==================================================
+    /* -----------------------------------------------------
+       PUT OVERRIDE
+       ----------------------------------------------------- */
 
     if (method == 2)
     {
-        sim7600.println(
-            "AT+HTTPPARA=\"USERDATA\",\"X-HTTP-Method-Override: PUT\""
+        Serial.println(
+            "Setting PUT method override..."
         );
 
+        sim7600.println(
+            "AT+HTTPPARA=\"USERDATA\","
+            "\"X-HTTP-Method-Override: PUT\""
+        );
 
-        if (
-            !waitForResponse(
-                "OK",
-                3000
-            )
-        )
+        if (!waitForResponse("OK", 3000))
         {
             Serial.println(
                 "ERROR: PUT override failed."
             );
 
-            sim7600.println(
-                "AT+HTTPTERM"
-            );
+            sim7600.println("AT+HTTPTERM");
+
+            delay(300);
 
             return false;
         }
     }
 
 
-    // ==================================================
-    // HTTP DATA
-    // ==================================================
+    /* -----------------------------------------------------
+       HTTP DATA
+       ----------------------------------------------------- */
+
+    Serial.println(
+        "Preparing HTTP data..."
+    );
 
     String httpDataCommand =
         "AT+HTTPDATA=";
 
+    httpDataCommand += payload.length();
+    httpDataCommand += ",15000";
 
-    httpDataCommand +=
-        payload.length();
+    sim7600.println(httpDataCommand);
 
-
-    httpDataCommand +=
-        ",15000";
-
-
-    sim7600.println(
-        httpDataCommand
-    );
-
-
-    if (
-        !waitForResponse(
-            "DOWNLOAD",
-            5000
-        )
-    )
+    if (!waitForResponse("DOWNLOAD", 5000))
     {
         Serial.println(
             "ERROR: DOWNLOAD prompt not received."
         );
 
-        sim7600.println(
-            "AT+HTTPTERM"
-        );
+        sim7600.println("AT+HTTPTERM");
+
+        delay(300);
 
         return false;
     }
 
 
-    // ==================================================
-    // SEND PAYLOAD
-    // ==================================================
+    /* -----------------------------------------------------
+       SEND PAYLOAD
+       ----------------------------------------------------- */
 
-    sim7600.print(
-        payload
+    Serial.println(
+        "Sending payload..."
     );
 
+    sim7600.print(payload);
 
-    if (
-        !waitForResponse(
-            "OK",
-            15000
-        )
-    )
+    if (!waitForResponse("OK", 15000))
     {
         Serial.println(
             "ERROR: Payload rejected."
         );
 
-        sim7600.println(
-            "AT+HTTPTERM"
-        );
+        sim7600.println("AT+HTTPTERM");
+
+        delay(300);
 
         return false;
     }
 
+    Serial.println(
+        "Payload accepted by modem."
+    );
 
-    // ==================================================
-    // HTTP ACTION
-    // ==================================================
+
+    /* -----------------------------------------------------
+       HTTP ACTION
+       ----------------------------------------------------- */
+
+    while (sim7600.available())
+        sim7600.read();
+
+    Serial.println();
+    Serial.println(
+        "Starting HTTPACTION..."
+    );
 
     sim7600.println(
         "AT+HTTPACTION=1"
@@ -829,93 +816,109 @@ bool sendFirebaseRequest(
 
     String response = "";
 
-
-    unsigned long start =
-        millis();
+    unsigned long start = millis();
 
 
-    while (
-        millis() - start < 30000
-    )
+    /*
+       Give the modem up to 120 seconds.
+
+       HTTPS/TLS negotiation can take considerably
+       longer than a normal AT command.
+    */
+
+    while (millis() - start < 120000UL)
     {
-        while (
-            sim7600.available()
-        )
+        while (sim7600.available())
         {
-            char c =
-                (char)sim7600.read();
-
+            char c = (char)sim7600.read();
 
             response += c;
 
             Serial.write(c);
         }
 
-
         if (
-            response.indexOf(
-                "+HTTPACTION:"
-            ) != -1
+            response.indexOf("+HTTPACTION:") != -1
         )
         {
             break;
         }
+
+        delay(10);
     }
 
 
+    /* -----------------------------------------------------
+       HTTP ACTION RESULT
+       ----------------------------------------------------- */
+
+    Serial.println();
     Serial.println();
 
     Serial.println(
         "HTTP ACTION RESPONSE:"
     );
 
-    Serial.println(
-        response
-    );
+    Serial.println(response);
 
-
-    // ==================================================
-    // PARSE HTTP STATUS
-    // ==================================================
 
     int actionIndex =
-        response.indexOf(
-            "+HTTPACTION:"
-        );
+        response.indexOf("+HTTPACTION:");
 
 
     if (actionIndex == -1)
     {
+        Serial.println();
         Serial.println(
-            "ERROR: No HTTPACTION response."
+            "ERROR: No HTTPACTION response received."
+        );
+
+        Serial.println(
+            "HTTP request timed out or modem did not "
+            "return a HTTPACTION URC."
         );
 
         sim7600.println(
             "AT+HTTPTERM"
         );
 
-        delay(300);
+        delay(500);
 
-
-        while (
-            sim7600.available()
-        )
+        while (sim7600.available())
         {
-            Serial.write(
-                sim7600.read()
-            );
+            Serial.write(sim7600.read());
         }
-
 
         return false;
     }
 
 
-    String action =
-        response.substring(
-            actionIndex
-        );
+    /* -----------------------------------------------------
+       PARSE HTTPACTION
+       ----------------------------------------------------- */
 
+    String action =
+        response.substring(actionIndex);
+
+
+    Serial.print(
+        "Parsed HTTPACTION: "
+    );
+
+    Serial.println(action);
+
+
+    /*
+       Expected format:
+
+       +HTTPACTION: <method>,<status>,<length>
+
+       Successful Firebase writes can return:
+
+       +HTTPACTION: 1,200,...
+       +HTTPACTION: 1,201,...
+       +HTTPACTION: 1,204,...
+    */
 
     bool success =
         action.indexOf(",200,") != -1 ||
@@ -923,35 +926,74 @@ bool sendFirebaseRequest(
         action.indexOf(",204,") != -1;
 
 
+    /* -----------------------------------------------------
+       SUCCESS
+       ----------------------------------------------------- */
+
     if (success)
     {
+        Serial.println();
         Serial.println(
             "FIREBASE REQUEST SUCCESS."
         );
     }
+
+
+    /* -----------------------------------------------------
+       FAILURE
+       ----------------------------------------------------- */
+
     else
     {
+        Serial.println();
         Serial.println(
             "FIREBASE REQUEST FAILED."
         );
+
+        Serial.println(
+            "Attempting HTTPREAD for error details..."
+        );
+
+
+        while (sim7600.available())
+            sim7600.read();
+
+        sim7600.println(
+            "AT+HTTPREAD"
+        );
+
+
+        unsigned long readStart =
+            millis();
+
+
+        while (
+            millis() - readStart < 5000
+        )
+        {
+            while (sim7600.available())
+            {
+                Serial.write(
+                    sim7600.read()
+                );
+            }
+
+            delay(10);
+        }
     }
 
 
-    // ==================================================
-    // CLOSE HTTP
-    // ==================================================
+    /* -----------------------------------------------------
+       HTTP TERM
+       ----------------------------------------------------- */
 
     sim7600.println(
         "AT+HTTPTERM"
     );
 
+    delay(500);
 
-    delay(300);
-
-
-    while (
-        sim7600.available()
-    )
+    while (sim7600.available())
     {
         Serial.write(
             sim7600.read()
@@ -968,9 +1010,9 @@ bool sendFirebaseRequest(
 }
 
 
-// ======================================================
-// BUILD TIMESTAMP
-// ======================================================
+/* =========================================================
+   TIMESTAMP
+   ========================================================= */
 
 String buildTimestamp(
     String gpsTime,
@@ -995,7 +1037,6 @@ String buildTimestamp(
     String year =
         gpsDate.substring(4, 6);
 
-
     String hour =
         gpsTime.substring(0, 2);
 
@@ -1006,9 +1047,7 @@ String buildTimestamp(
         gpsTime.substring(4, 6);
 
 
-    String timestamp =
-        "20";
-
+    String timestamp = "20";
 
     timestamp += year;
     timestamp += "-";
@@ -1028,14 +1067,18 @@ String buildTimestamp(
 }
 
 
-// ======================================================
-// SAVE HISTORY OR QUEUE OFFLINE
-// ======================================================
+/* =========================================================
+   SAVE HISTORY OR QUEUE
+   ========================================================= */
 
 bool saveHistoryOrQueue(
     const String &payload
 )
 {
+    /*
+       First check whether cellular data is available.
+    */
+
     if (!hasNetworkConnection())
     {
         Serial.println();
@@ -1048,11 +1091,31 @@ bool saveHistoryOrQueue(
         );
 
 
-        return saveOfflineRecord(
-            payload
-        );
+        bool queued =
+            saveOfflineRecord(payload);
+
+
+        if (queued)
+        {
+            Serial.println(
+                "History record QUEUED locally."
+            );
+        }
+        else
+        {
+            Serial.println(
+                "ERROR: Failed to queue history record."
+            );
+        }
+
+
+        return queued;
     }
 
+
+    /*
+       Network is available, so try Firebase first.
+    */
 
     bool success =
         sendFirebaseRequest(
@@ -1065,12 +1128,19 @@ bool saveHistoryOrQueue(
     if (success)
     {
         Serial.println(
-            "History uploaded successfully."
+            "History uploaded to Firebase successfully."
         );
 
         return true;
     }
 
+
+    /*
+       Firebase failed.
+
+       Keep the record locally so the offline sync
+       mechanism can retry it later.
+    */
 
     Serial.println();
     Serial.println(
@@ -1082,15 +1152,31 @@ bool saveHistoryOrQueue(
     );
 
 
-    return saveOfflineRecord(
-        payload
-    );
+    bool queued =
+        saveOfflineRecord(payload);
+
+
+    if (queued)
+    {
+        Serial.println(
+            "History record QUEUED locally."
+        );
+    }
+    else
+    {
+        Serial.println(
+            "ERROR: Failed to queue history record."
+        );
+    }
+
+
+    return queued;
 }
 
 
-// ======================================================
-// SOS EVENT
-// ======================================================
+/* =========================================================
+   SOS EVENT
+   ========================================================= */
 
 bool sendSOSEvent()
 {
@@ -1107,11 +1193,6 @@ bool sendSOSEvent()
     bool sosActive =
         isSOSActive();
 
-
-    // ==================================================
-    // GPS DATA
-    // ==================================================
-
     bool gpsAvailable =
         hasGPSFix();
 
@@ -1119,7 +1200,6 @@ bool sendSOSEvent()
     float latitude = 0;
     float longitude = 0;
     float altitude = 0;
-
 
     String gpsTime = "";
     String gpsDate = "";
@@ -1144,10 +1224,6 @@ bool sendSOSEvent()
     }
 
 
-    // ==================================================
-    // TIMESTAMP
-    // ==================================================
-
     String timestamp;
 
 
@@ -1169,10 +1245,6 @@ bool sendSOSEvent()
     }
 
 
-    // ==================================================
-    // SENSOR DATA
-    // ==================================================
-
     float accelX =
         getAccelX();
 
@@ -1181,7 +1253,6 @@ bool sendSOSEvent()
 
     float accelZ =
         getAccelZ();
-
 
     float gyroX =
         getGyroX();
@@ -1192,10 +1263,8 @@ bool sendSOSEvent()
     float gyroZ =
         getGyroZ();
 
-
     uint8_t battery =
         getBatteryLevel();
-
 
     bool moving =
         isMoving();
@@ -1219,12 +1288,7 @@ bool sendSOSEvent()
             : "INACTIVE";
 
 
-    // ==================================================
-    // BUILD SOS PAYLOAD
-    // ==================================================
-
-    String payload =
-        "{";
+    String payload = "{";
 
 
     payload +=
@@ -1329,8 +1393,7 @@ bool sendSOSEvent()
         String(accelZ, 3);
 
 
-    payload +=
-        "},";
+    payload += "},";
 
 
     payload +=
@@ -1354,17 +1417,11 @@ bool sendSOSEvent()
         String(gyroZ, 3);
 
 
-    payload +=
-        "}";
+    payload += "}";
 
 
-    payload +=
-        "}";
+    payload += "}";
 
-
-    // ==================================================
-    // DEBUG
-    // ==================================================
 
     Serial.println();
     Serial.println(
@@ -1379,14 +1436,15 @@ bool sendSOSEvent()
         "================================"
     );
 
-    Serial.println(
-        payload
-    );
+    Serial.println(payload);
 
 
-    // ==================================================
-    // SAVE TO HISTORY
-    // ==================================================
+    /*
+       Save the SOS event to history.
+
+       If Firebase fails, saveHistoryOrQueue() puts it
+       into the offline history queue.
+    */
 
     bool historySuccess =
         saveHistoryOrQueue(
@@ -1394,17 +1452,15 @@ bool sendSOSEvent()
         );
 
 
-    // ==================================================
-    // UPDATE /SOS
-    // ==================================================
+    /*
+       SOS endpoint is NOT part of the offline history queue.
+       It is attempted only when the network is available.
+    */
 
-    bool sosSuccess =
-        false;
+    bool sosSuccess = false;
 
 
-    if (
-        hasNetworkConnection()
-    )
+    if (hasNetworkConnection())
     {
         sosSuccess =
             sendFirebaseRequest(
@@ -1415,20 +1471,16 @@ bool sendSOSEvent()
     }
 
 
-    // ==================================================
-    // UPDATE CURRENT
-    // ==================================================
+    /* -----------------------------------------------------
+       CURRENT SOS STATE
+       ----------------------------------------------------- */
 
-    bool currentSuccess =
-        false;
+    bool currentSuccess = false;
 
 
-    if (
-        hasNetworkConnection()
-    )
+    if (hasNetworkConnection())
     {
-        String currentPayload =
-            "{";
+        String currentPayload = "{";
 
 
         currentPayload +=
@@ -1473,8 +1525,7 @@ bool sendSOSEvent()
             String(battery);
 
 
-        currentPayload +=
-            "}";
+        currentPayload += "}";
 
 
         currentSuccess =
@@ -1486,20 +1537,16 @@ bool sendSOSEvent()
     }
 
 
-    // ==================================================
-    // UPDATE STATUS
-    // ==================================================
+    /* -----------------------------------------------------
+       STATUS
+       ----------------------------------------------------- */
 
-    bool statusSuccess =
-        false;
+    bool statusSuccess = false;
 
 
-    if (
-        hasNetworkConnection()
-    )
+    if (hasNetworkConnection())
     {
-        String statusPayload =
-            "{";
+        String statusPayload = "{";
 
 
         statusPayload +=
@@ -1527,8 +1574,7 @@ bool sendSOSEvent()
             String(battery);
 
 
-        statusPayload +=
-            "}";
+        statusPayload += "}";
 
 
         statusSuccess =
@@ -1540,9 +1586,9 @@ bool sendSOSEvent()
     }
 
 
-    // ==================================================
-    // RESULT
-    // ==================================================
+    /* -----------------------------------------------------
+       RESULTS
+       ----------------------------------------------------- */
 
     Serial.println();
     Serial.println(
@@ -1556,8 +1602,8 @@ bool sendSOSEvent()
 
     Serial.println(
         historySuccess
-            ? "SUCCESS"
-            : "QUEUED/FAILED"
+            ? "UPLOADED / QUEUED"
+            : "FAILED"
     );
 
 
@@ -1594,34 +1640,18 @@ bool sendSOSEvent()
     );
 
 
-    // ==================================================
-    // EVENT CONSIDERED PROCESSED
-    // ==================================================
-
     return historySuccess;
 }
 
 
-// ======================================================
-// PROCESS SOS STATE CHANGE
-// ======================================================
-//
-// IMPORTANT:
-// This does NOT depend on BLE.
-//
-// updateSOS() detects the physical button.
-// gsmLoop() detects the SOS state change.
-// Therefore the SOS system continues working even
-// when BLE is disconnected.
-//
-// ======================================================
+/* =========================================================
+   SOS PROCESSING
+   ========================================================= */
 
 void processSOS()
 {
     if (!hasSOSStateChanged())
-    {
         return;
-    }
 
 
     Serial.println();
@@ -1633,18 +1663,11 @@ void processSOS()
     sosEventPending = true;
 
 
-    // ==================================================
-    // TRY TO SEND EVENT
-    // ==================================================
-
-    if (
-        sendSOSEvent()
-    )
+    if (sendSOSEvent())
     {
         sosEventPending = false;
 
         clearSOSStateChanged();
-
 
         Serial.println(
             "SOS EVENT PROCESSED."
@@ -1663,9 +1686,9 @@ void processSOS()
 }
 
 
-// ======================================================
-// SYNC OFFLINE HISTORY
-// ======================================================
+/* =========================================================
+   OFFLINE HISTORY SYNC
+   ========================================================= */
 
 void syncOfflineHistory()
 {
@@ -1692,45 +1715,97 @@ void syncOfflineHistory()
         "================================"
     );
 
-
     Serial.print(
         "Records waiting: "
     );
 
-    Serial.println(
-        count
-    );
+    Serial.println(count);
 
+
+    /* -----------------------------------------------------
+       CHECK NETWORK
+       ----------------------------------------------------- */
 
     if (!hasNetworkConnection())
     {
         Serial.println(
-            "Network still unavailable."
+            "Network unavailable. "
+            "Sync postponed."
         );
 
         return;
     }
 
 
+    /*
+       Limit the amount of work performed in one cycle.
+
+       This prevents hundreds of queued records from
+       blocking the rest of the tracker indefinitely.
+
+       The next gsmLoop() cycle will continue the queue.
+    */
+
+    const int MAX_UPLOADS_PER_CYCLE = 10;
+
     int uploaded = 0;
 
 
+    /* -----------------------------------------------------
+       UPLOAD QUEUED HISTORY
+       ----------------------------------------------------- */
+
     while (
+        uploaded < MAX_UPLOADS_PER_CYCLE &&
         getOfflineRecordCount() > 0
     )
     {
-        String payload =
-            getOfflineRecord(
-                0
+        /*
+           Re-check network before every upload.
+
+           If the network disappears, stop immediately.
+        */
+
+        if (!hasNetworkConnection())
+        {
+            Serial.println();
+            Serial.println(
+                "Network lost during offline sync."
             );
 
-
-        if (
-            payload.length() == 0
-        )
-        {
             Serial.println(
-                "ERROR: Could not read offline record."
+                "Stopping sync."
+            );
+
+            Serial.println(
+                "Remaining records are safely queued."
+            );
+
+            break;
+        }
+
+
+        /*
+           Always retrieve record 0.
+
+           storage.cpp finds the numerically newest
+           record ID.
+        */
+
+        String payload =
+            getOfflineRecord(0);
+
+
+        if (payload.length() == 0)
+        {
+            Serial.println();
+            Serial.println(
+                "ERROR: Could not read oldest "
+                "offline record."
+            );
+
+            Serial.println(
+                "Stopping sync to preserve queue."
             );
 
             break;
@@ -1739,9 +1814,40 @@ void syncOfflineHistory()
 
         Serial.println();
         Serial.println(
-            "Uploading offline record..."
+            "--------------------------------"
         );
 
+        Serial.println(
+            "Uploading offline record"
+        );
+
+        Serial.println(
+            "--------------------------------"
+        );
+
+
+        Serial.print(
+            "Payload length: "
+        );
+
+        Serial.println(
+            payload.length()
+        );
+
+
+        /*
+           IMPORTANT:
+
+           Offline records are uploaded ONLY to:
+
+               historyURL
+
+           They are NEVER replayed to:
+
+               currentURL
+               statusURL
+               sosURL
+        */
 
         bool success =
             sendFirebaseRequest(
@@ -1751,10 +1857,65 @@ void syncOfflineHistory()
             );
 
 
+        /* -------------------------------------------------
+           UPLOAD FAILED
+           ------------------------------------------------- */
+
         if (!success)
         {
+            Serial.println();
             Serial.println(
-                "Offline upload failed."
+                "OFFLINE UPLOAD FAILED."
+            );
+
+            Serial.println(
+                "Record has NOT been deleted."
+            );
+
+            Serial.println(
+                "Sync stopped."
+            );
+
+            Serial.println(
+                "Will retry on the next sync cycle."
+            );
+
+            break;
+        }
+
+
+        /* -------------------------------------------------
+           UPLOAD SUCCESSFUL
+           ------------------------------------------------- */
+
+        Serial.println();
+        Serial.println(
+            "Firebase accepted offline record."
+        );
+
+
+        /*
+           CRITICAL:
+
+           Delete the local record ONLY after the
+           Firebase request returned HTTP 200, 201,
+           or 204.
+
+           sendFirebaseRequest() returns true only for
+           those successful HTTP status codes.
+        */
+
+        if (
+            !deleteOfflineRecord(0)
+        )
+        {
+            Serial.println();
+            Serial.println(
+                "ERROR: Firebase upload succeeded,"
+            );
+
+            Serial.println(
+                "but local deletion failed."
             );
 
             Serial.println(
@@ -1765,39 +1926,55 @@ void syncOfflineHistory()
         }
 
 
-        if (
-            deleteOfflineRecord(0)
-        )
-        {
-            uploaded++;
+        uploaded++;
 
 
-            Serial.print(
-                "Offline record uploaded. Remaining: "
-            );
+        Serial.println(
+            "Offline record uploaded and deleted."
+        );
 
-            Serial.println(
-                getOfflineRecordCount()
-            );
-        }
-        else
-        {
-            Serial.println(
-                "ERROR: Upload succeeded but deletion failed."
-            );
 
-            break;
-        }
+        Serial.print(
+            "Uploaded this cycle: "
+        );
 
+        Serial.println(
+            uploaded
+        );
+
+
+        Serial.print(
+            "Records remaining: "
+        );
+
+        Serial.println(
+            getOfflineRecordCount()
+        );
+
+
+        /*
+           Small delay between uploads.
+
+           This gives the modem a little breathing room
+           and prevents the queue sync from hammering
+           the network continuously.
+        */
 
         delay(500);
     }
 
 
+    /* -----------------------------------------------------
+       SYNC SUMMARY
+       ----------------------------------------------------- */
+
     Serial.println();
+    Serial.println(
+        "================================"
+    );
 
     Serial.print(
-        "Offline records uploaded: "
+        "Offline records uploaded this cycle: "
     );
 
     Serial.println(
@@ -1814,37 +1991,51 @@ void syncOfflineHistory()
     );
 
 
+    if (
+        getOfflineRecordCount() == 0
+    )
+    {
+        Serial.println(
+            "OFFLINE QUEUE COMPLETELY CLEARED."
+        );
+    }
+    else
+    {
+        Serial.println(
+            "More records remain."
+        );
+
+        Serial.println(
+            "They will be uploaded on the next sync cycle."
+        );
+    }
+
+
     Serial.println(
         "================================"
     );
 }
 
 
-// ======================================================
-// GSM LOOP
-// ======================================================
+/* =========================================================
+   GSM LOOP
+   ========================================================= */
 
 void gsmLoop()
 {
-    // ==================================================
-    // SOS MUST BE CHECKED FIRST
-    // ==================================================
-    //
-    // Do NOT put SOS behind:
-    //
-    // if (!BLE connected)
-    //
-    // or any BLE condition.
-    //
-    // SOS is completely independent of BLE.
-    //
+    /*
+       Process SOS first.
+
+       SOS behaviour remains independent from the
+       offline history queue.
+    */
 
     processSOS();
 
 
-    // ==================================================
-    // OFFLINE HISTORY SYNC TIMER
-    // ==================================================
+    /*
+       Offline history sync runs every 10 seconds.
+    */
 
     if (
         millis() - lastOfflineSync <
@@ -1868,9 +2059,9 @@ void gsmLoop()
 }
 
 
-// ======================================================
-// SEND LOCATION
-// ======================================================
+/* =========================================================
+   SEND LOCATION
+   ========================================================= */
 
 bool sendLocation(
     float latitude,
@@ -1891,20 +2082,12 @@ bool sendLocation(
     }
 
 
-    // ==================================================
-    // TIMESTAMP
-    // ==================================================
-
     String timestamp =
         buildTimestamp(
             gpsTime,
             gpsDate
         );
 
-
-    // ==================================================
-    // SENSOR VALUES
-    // ==================================================
 
     float accelX =
         getAccelX();
@@ -1915,7 +2098,6 @@ bool sendLocation(
     float accelZ =
         getAccelZ();
 
-
     float gyroX =
         getGyroX();
 
@@ -1925,10 +2107,8 @@ bool sendLocation(
     float gyroZ =
         getGyroZ();
 
-
     uint8_t battery =
         getBatteryLevel();
-
 
     bool moving =
         isMoving();
@@ -1944,10 +2124,6 @@ bool sendLocation(
         getTrackerModeName();
 
 
-    // ==================================================
-    // STATUS
-    // ==================================================
-
     const char *status =
         gpsAvailable
             ? "LOCATION_AVAILABLE"
@@ -1960,12 +2136,11 @@ bool sendLocation(
             : "device_sensor";
 
 
-    // ==================================================
-    // CURRENT PAYLOAD
-    // ==================================================
+    /* -----------------------------------------------------
+       HISTORY / CURRENT PAYLOAD
+       ----------------------------------------------------- */
 
-    String currentPayload =
-        "{";
+    String currentPayload = "{";
 
 
     if (gpsAvailable)
@@ -2058,8 +2233,7 @@ bool sendLocation(
         String(accelZ, 3);
 
 
-    currentPayload +=
-        "},";
+    currentPayload += "},";
 
 
     currentPayload +=
@@ -2083,21 +2257,17 @@ bool sendLocation(
         String(gyroZ, 3);
 
 
-    currentPayload +=
-        "}"
-    ;
+    currentPayload += "}";
 
 
-    currentPayload +=
-        "}";
+    currentPayload += "}";
 
 
-    // ==================================================
-    // STATUS PAYLOAD
-    // ==================================================
+    /* -----------------------------------------------------
+       STATUS PAYLOAD
+       ----------------------------------------------------- */
 
-    String statusPayload =
-        "{";
+    String statusPayload = "{";
 
 
     statusPayload +=
@@ -2157,8 +2327,7 @@ bool sendLocation(
         String(accelZ, 3);
 
 
-    statusPayload +=
-        "},";
+    statusPayload += "},";
 
 
     statusPayload +=
@@ -2182,17 +2351,15 @@ bool sendLocation(
         String(gyroZ, 3);
 
 
-    statusPayload +=
-        "}";
+    statusPayload += "}";
 
 
-    statusPayload +=
-        "}";
+    statusPayload += "}";
 
 
-    // ==================================================
-    // HISTORY
-    // ==================================================
+    /* -----------------------------------------------------
+       HISTORY
+       ----------------------------------------------------- */
 
     bool historySuccess =
         saveHistoryOrQueue(
@@ -2200,20 +2367,19 @@ bool sendLocation(
         );
 
 
-    // ==================================================
-    // CURRENT + STATUS
-    // ==================================================
-
-    bool currentSuccess =
-        false;
-
-    bool statusSuccess =
-        false;
+    bool currentSuccess = false;
+    bool statusSuccess = false;
 
 
-    if (
-        hasNetworkConnection()
-    )
+    /* -----------------------------------------------------
+       CURRENT + STATUS
+
+       These are intentionally NOT queued offline.
+
+       Only history is queued.
+       ----------------------------------------------------- */
+
+    if (hasNetworkConnection())
     {
         currentSuccess =
             sendFirebaseRequest(
@@ -2246,7 +2412,12 @@ bool sendLocation(
     }
 
 
+    /* -----------------------------------------------------
+       RESULTS
+       ----------------------------------------------------- */
+
     Serial.println();
+
     Serial.println(
         "Firebase tracker upload results:"
     );
@@ -2258,8 +2429,8 @@ bool sendLocation(
 
     Serial.println(
         historySuccess
-            ? "SUCCESS"
-            : "QUEUED"
+            ? "UPLOADED / QUEUED"
+            : "FAILED"
     );
 
 
@@ -2289,9 +2460,9 @@ bool sendLocation(
 }
 
 
-// ======================================================
-// LOG GPS NO FIX
-// ======================================================
+/* =========================================================
+   GPS NO FIX LOG
+   ========================================================= */
 
 bool logGPSNoFix(
     String gpsTime,
@@ -2324,7 +2495,6 @@ bool logGPSNoFix(
     float accelZ =
         getAccelZ();
 
-
     float gyroX =
         getGyroX();
 
@@ -2334,10 +2504,8 @@ bool logGPSNoFix(
     float gyroZ =
         getGyroZ();
 
-
     uint8_t battery =
         getBatteryLevel();
-
 
     bool moving =
         isMoving();
@@ -2353,8 +2521,7 @@ bool logGPSNoFix(
         getTrackerModeName();
 
 
-    String payload =
-        "{";
+    String payload = "{";
 
 
     payload +=
@@ -2422,8 +2589,7 @@ bool logGPSNoFix(
         String(accelZ, 3);
 
 
-    payload +=
-        "},";
+    payload += "},";
 
 
     payload +=
@@ -2447,12 +2613,10 @@ bool logGPSNoFix(
         String(gyroZ, 3);
 
 
-    payload +=
-        "}";
+    payload += "}";
 
 
-    payload +=
-        "}";
+    payload += "}";
 
 
     Serial.println();
@@ -2460,9 +2624,7 @@ bool logGPSNoFix(
         "NO_FIX PAYLOAD:"
     );
 
-    Serial.println(
-        payload
-    );
+    Serial.println(payload);
 
 
     bool success =
@@ -2474,13 +2636,15 @@ bool logGPSNoFix(
     if (success)
     {
         Serial.println(
-            "GPS NO_FIX HISTORY SAVED/QUEUED."
+            "GPS NO_FIX HISTORY "
+            "SAVED/QUEUED."
         );
     }
     else
     {
         Serial.println(
-            "FAILED TO SAVE GPS NO_FIX RECORD."
+            "FAILED TO SAVE GPS "
+            "NO_FIX RECORD."
         );
     }
 
