@@ -108,6 +108,21 @@ let ledOn = false;
 
 
 // ======================================================
+// BLE CONNECTION STATE
+// ======================================================
+//
+// This is the source of truth for the dashboard.
+//
+// true  = BLE is connected, BLE owns Device GPS fields
+// false = BLE is disconnected, Firebase /current owns
+//         Device GPS fields
+//
+// ======================================================
+
+let bleConnected = false;
+
+
+// ======================================================
 // FIRST-TIME CONNECTION
 // ======================================================
 
@@ -530,6 +545,11 @@ async function connectToDevice()
             "characteristicvaluechanged",
             event =>
             {
+                if (!bleConnected)
+                {
+                    return;
+                }
+
                 const value =
                     decode(event);
 
@@ -549,6 +569,11 @@ async function connectToDevice()
             "characteristicvaluechanged",
             event =>
             {
+                if (!bleConnected)
+                {
+                    return;
+                }
+
                 const value =
                     decode(event);
 
@@ -568,6 +593,11 @@ async function connectToDevice()
             "characteristicvaluechanged",
             event =>
             {
+                if (!bleConnected)
+                {
+                    return;
+                }
+
                 altitude.textContent =
                     decode(event);
             }
@@ -582,6 +612,11 @@ async function connectToDevice()
             "characteristicvaluechanged",
             event =>
             {
+                if (!bleConnected)
+                {
+                    return;
+                }
+
                 gpsTime.textContent =
                     decode(event);
             }
@@ -596,6 +631,11 @@ async function connectToDevice()
             "characteristicvaluechanged",
             event =>
             {
+                if (!bleConnected)
+                {
+                    return;
+                }
+
                 updateGPSStatus(
                     decode(event)
                 );
@@ -616,6 +656,19 @@ async function connectToDevice()
                 );
             }
         );
+
+
+        // ==================================================
+        // MARK BLE AS CONNECTED
+        // ==================================================
+        //
+        // Do this before reading the initial GPS status.
+        // This ensures BLE is the owner of Device GPS
+        // immediately after connection.
+        //
+        // ==================================================
+
+        bleConnected = true;
 
 
         // ==================================================
@@ -674,6 +727,8 @@ async function connectToDevice()
 
     catch(error)
     {
+        bleConnected = false;
+
         console.error(
             "Failed to connect to Smart Tracker:",
             error
@@ -933,6 +988,14 @@ function onDisconnected()
 
 
     // ==================================================
+    // BLE CONNECTION STATE
+    // ==================================================
+
+    bleConnected =
+        false;
+
+
+    // ==================================================
     // BLE CONNECTION STATUS
     // ==================================================
 
@@ -963,24 +1026,25 @@ function onDisconnected()
     // ==================================================
     // DEVICE GPS
     // ==================================================
+    //
+    // IMPORTANT:
+    //
+    // DO NOT clear latitude/longitude/altitude/gpsTime.
+    //
+    // After BLE disconnects, dashboard.js will read
+    // Firebase /current and use the tracker GSM/GPS
+    // location to keep these fields updated.
+    //
+    // Last Known Location remains separate and continues
+    // to come only from Firebase /lastSeen.
+    //
+    // ==================================================
 
     gpsStatus.textContent =
-        "DISCONNECTED";
+        "GSM/GPS";
 
     gpsStatus.className =
-        "gps-searching";
-
-    latitude.textContent =
-        "-";
-
-    longitude.textContent =
-        "-";
-
-    altitude.textContent =
-        "-";
-
-    gpsTime.textContent =
-        "-";
+        "gps-fixed";
 
 
     // ==================================================
@@ -1007,6 +1071,7 @@ function onDisconnected()
         ledBtn.textContent =
             "Turn ON Sound";
     }
+
 
     ledOn =
         false;
@@ -1070,12 +1135,29 @@ function onDisconnected()
 
 
 // ======================================================
+// BLE CONNECTION STATE
+// ======================================================
+//
+// Dashboard uses this to decide which source owns
+// the Device GPS fields.
+//
+// ======================================================
+
+function isBLEConnected()
+{
+    return bleConnected;
+}
+
+
+// ======================================================
 // EXPORTS
 // ======================================================
 
 export {
+
     connect,
     autoConnect,
-    toggleLED
-};
+    toggleLED,
+    isBLEConnected
 
+};

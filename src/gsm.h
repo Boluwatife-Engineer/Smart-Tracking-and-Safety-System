@@ -47,6 +47,28 @@ bool sendLocation(
 
 
 // ======================================================
+// LAST SEEN LOCATION
+// ======================================================
+//
+// Captures the current GPS position as the Last Known
+// Location after BLE disconnects.
+//
+
+bool captureLastSeenLocation();
+
+
+// ======================================================
+// LAST SEEN SYNC
+// ======================================================
+//
+// Pushes the locally stored Last Seen location to Firebase
+// when cellular connectivity becomes available.
+//
+
+bool syncLastSeenLocation();
+
+
+// ======================================================
 // GPS NO FIX
 // ======================================================
 

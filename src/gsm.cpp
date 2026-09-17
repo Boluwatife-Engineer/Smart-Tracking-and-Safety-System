@@ -2,6 +2,7 @@
 
 #include "sim7600.h"
 #include "storage.h"
+#include "callbacks.h"
 #include "mpu6050.h"
 #include "battery.h"
 #include "tracker_state.h"
@@ -21,6 +22,8 @@ const char *statusURL =
 
 const char *sosURL =
     "https://smart-trackerr-default-rtdb.firebaseio.com/Trackers/tracker_001/sos.json";
+const char *lastSeenURL =
+    "https://smart-trackerr-default-rtdb.firebaseio.com/Trackers/tracker_001/lastSeen.json";
 
 unsigned long lastOfflineSync = 0;
 const unsigned long OFFLINE_SYNC_INTERVAL = 10000;
@@ -1066,6 +1069,236 @@ String buildTimestamp(
     return timestamp;
 }
 
+/* =========================================================
+   CAPTURE LAST SEEN LOCATION
+   ========================================================= */
+
+bool captureLastSeenLocation()
+{
+    Serial.println();
+    Serial.println("================================");
+    Serial.println("CAPTURING LAST SEEN LOCATION");
+    Serial.println("================================");
+
+    /*
+       We only capture Last Seen when a valid GPS fix exists.
+
+       This prevents overwriting a previously valid Last Seen
+       location with a GPS NO_FIX state.
+    */
+
+    if (!hasGPSFix())
+    {
+        Serial.println(
+            "Cannot capture Last Seen: GPS has no fix."
+        );
+
+        return false;
+    }
+
+
+    /* -----------------------------------------------------
+       READ CURRENT GPS
+       ----------------------------------------------------- */
+
+    float latitude =
+        getLatitude();
+
+    float longitude =
+        getLongitude();
+
+    float altitude =
+        getAltitude();
+
+    String gpsTime =
+        getGPSTime();
+
+    String gpsDate =
+        getGPSDate();
+
+    String timestamp =
+        buildTimestamp(
+            gpsTime,
+            gpsDate
+        );
+
+
+    /* -----------------------------------------------------
+       BUILD LAST SEEN PAYLOAD
+       ----------------------------------------------------- */
+
+    String payload = "{";
+
+    payload +=
+        "\"latitude\":" +
+        String(latitude, 6) +
+        ",";
+
+    payload +=
+        "\"longitude\":" +
+        String(longitude, 6) +
+        ",";
+
+    payload +=
+        "\"altitude\":" +
+        String(altitude, 1) +
+        ",";
+
+    payload +=
+        "\"gpsTime\":\"" +
+        gpsTime +
+        "\",";
+
+    payload +=
+        "\"gpsDate\":\"" +
+        gpsDate +
+        "\",";
+
+    payload +=
+        "\"timestamp\":\"" +
+        timestamp +
+        "\",";
+
+    payload +=
+        "\"source\":\"ble_disconnect\",";
+
+    payload +=
+        "\"status\":\"LOCATION_AVAILABLE\"";
+
+    payload += "}";
+
+
+    /* -----------------------------------------------------
+       SAVE LOCALLY FIRST
+       -----------------------------------------------------
+
+       This means the Last Seen location survives a reboot
+       even if cellular connectivity is unavailable.
+    */
+
+    saveLastSeen(payload);
+
+
+    Serial.println();
+    Serial.println("Last Seen Location captured:");
+    Serial.println(payload);
+
+
+    /* -----------------------------------------------------
+       UPLOAD TO FIREBASE
+       ----------------------------------------------------- */
+
+    if (!hasNetworkConnection())
+    {
+        Serial.println(
+            "Network unavailable."
+        );
+
+        Serial.println(
+            "Last Seen saved locally."
+        );
+
+        Serial.println(
+            "It will be synchronized when network returns."
+        );
+
+        return true;
+    }
+
+
+    bool success =
+        sendFirebaseRequest(
+            lastSeenURL,
+            payload,
+            2
+        );
+
+
+    if (success)
+    {
+        Serial.println(
+            "Last Seen uploaded to Firebase."
+        );
+    }
+    else
+    {
+        Serial.println(
+            "Last Seen Firebase upload failed."
+        );
+
+        Serial.println(
+            "Location remains saved locally."
+        );
+    }
+
+
+    Serial.println(
+        "================================"
+    );
+
+
+    /*
+       Return true because the location was successfully
+       captured and stored locally even if Firebase failed.
+    */
+
+    return true;
+}
+
+
+/* =========================================================
+   SYNC LAST SEEN LOCATION
+   ========================================================= */
+
+bool syncLastSeenLocation()
+{
+    String payload =
+        loadLastSeen();
+
+
+    if (payload.length() == 0)
+    {
+        return false;
+    }
+
+
+    if (!hasNetworkConnection())
+    {
+        return false;
+    }
+
+
+    Serial.println();
+    Serial.println(
+        "Synchronizing stored Last Seen location..."
+    );
+
+
+    bool success =
+        sendFirebaseRequest(
+            lastSeenURL,
+            payload,
+            2
+        );
+
+
+    if (success)
+    {
+        Serial.println(
+            "Stored Last Seen location synchronized."
+        );
+    }
+    else
+    {
+        Serial.println(
+            "Failed to synchronize Last Seen location."
+        );
+    }
+
+
+    return success;
+}
+
 
 /* =========================================================
    SAVE HISTORY OR QUEUE
@@ -2021,10 +2254,38 @@ void syncOfflineHistory()
    GSM LOOP
    ========================================================= */
 
+/* =========================================================
+   GSM LOOP
+   ========================================================= */
+
 void gsmLoop()
 {
-    /*
-       Process SOS first.
+    /* -----------------------------------------------------
+       BLE DISCONNECT / LAST SEEN
+       -----------------------------------------------------
+
+       onDisconnect() only sets bleDisconnectPending.
+
+       We process the event here in the normal application
+       context so GPS/storage/Firebase operations are safe.
+    */
+
+    if (bleDisconnectPending)
+    {
+        bleDisconnectPending = false;
+
+        Serial.println();
+        Serial.println(
+            "BLE disconnect event received."
+        );
+
+        captureLastSeenLocation();
+    }
+
+
+    /* -----------------------------------------------------
+       PROCESS SOS
+       -----------------------------------------------------
 
        SOS behaviour remains independent from the
        offline history queue.
@@ -2033,8 +2294,11 @@ void gsmLoop()
     processSOS();
 
 
-    /*
-       Offline history sync runs every 10 seconds.
+    /* -----------------------------------------------------
+       OFFLINE HISTORY / LAST SEEN SYNC
+       -----------------------------------------------------
+
+       Both are checked every 10 seconds.
     */
 
     if (
@@ -2049,6 +2313,24 @@ void gsmLoop()
     lastOfflineSync =
         millis();
 
+
+    /* -----------------------------------------------------
+       SYNC STORED LAST SEEN
+       -----------------------------------------------------
+
+       This handles the case where BLE disconnected while
+       cellular data was unavailable.
+    */
+
+    if (loadLastSeen().length() > 0)
+    {
+        syncLastSeenLocation();
+    }
+
+
+    /* -----------------------------------------------------
+       SYNC OFFLINE HISTORY
+       ----------------------------------------------------- */
 
     if (
         getOfflineRecordCount() > 0

@@ -3,12 +3,32 @@
 #include <Arduino.h>
 
 #include "storage.h"
-
 #include "pins.h"
 
 
+// ======================================================
+// EXTERNAL BLE STATE
+// ======================================================
 
 extern bool deviceConnected;
+
+
+// ======================================================
+// BLE DISCONNECT EVENT
+// ======================================================
+//
+// This flag is intentionally processed outside the
+// NimBLE callback.
+//
+// Do NOT perform Firebase HTTP requests here.
+//
+
+volatile bool bleDisconnectPending = false;
+
+
+// ======================================================
+// SERVER CALLBACKS
+// ======================================================
 
 void ServerCallbacks::onConnect(
     NimBLEServer *,
@@ -19,6 +39,11 @@ void ServerCallbacks::onConnect(
     Serial.println("BLE Connected");
 }
 
+
+// ======================================================
+// BLE DISCONNECT
+// ======================================================
+
 void ServerCallbacks::onDisconnect(
     NimBLEServer *,
     NimBLEConnInfo &,
@@ -26,10 +51,21 @@ void ServerCallbacks::onDisconnect(
 {
     deviceConnected = false;
 
+    // Tell the normal application loop that BLE just
+    // disconnected and the last known GPS location
+    // needs to be captured.
+    bleDisconnectPending = true;
+
     Serial.println("BLE Disconnected");
+    Serial.println("Last Seen capture pending.");
 
     NimBLEDevice::startAdvertising();
 }
+
+
+// ======================================================
+// BUZZER
+// ======================================================
 
 void BuzzerCallbacks::onWrite(
     NimBLECharacteristic *characteristic,
@@ -54,6 +90,18 @@ void BuzzerCallbacks::onWrite(
         Serial.println("Buzzer OFF");
     }
 }
+
+
+// ======================================================
+// LAST SEEN BLE WRITE
+// ======================================================
+//
+// This is kept for compatibility with your existing
+// BLE characteristic.
+//
+// Automatic Last Seen capture now happens when BLE
+// disconnects.
+//
 
 void LastSeenCallbacks::onWrite(
     NimBLECharacteristic *characteristic,
