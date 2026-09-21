@@ -33,7 +33,7 @@ The demo shows the current working prototype, including:
 
 <!-- Add your best prototype photo here -->
 
-![TraceX Prototype](images/tracex-prototype.jpeg)
+![TraceX Prototype](Images/tracex-prototype.jpeg)
 
 TraceX is being developed as a small wearable or attachable tracker for **people and valuables**.
 
@@ -287,7 +287,7 @@ The prototype uses **Firebase Realtime Database** as the cloud backend.
 
 The dashboard uses **Leaflet** to visualize tracker locations.
 
-![TraceX Dashboard](images/dashboard.png)
+![TraceX Dashboard](Images/dashboard.png)
 
 <!-- Add a screenshot of your dashboard here -->
 
